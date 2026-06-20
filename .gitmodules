@@ -1,0 +1,3 @@
+[submodule "Casandra User Agent"]
+	path = Casandra User Agent
+	url = https://github.com/As1agi/Cassandra
