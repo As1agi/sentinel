@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/Casandra.iml" filepath="$PROJECT_DIR$/.idea/Casandra.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Casandra Server/.idea/Casandra Server.iml" filepath="$PROJECT_DIR$/../Casandra Server/.idea/Casandra Server.iml" />
+    </modules>
+  </component>
+</project>
