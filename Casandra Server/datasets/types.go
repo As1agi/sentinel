@@ -3,7 +3,7 @@ package main
 // Upstream OSV structural definitions (only matching the fields we want to extract)
 type OSVAdvisory struct {
 	ID       string        `json:"id"`
-	Upstream []string      `json:"upstream"`
+	Upstream []string      `json:"upstream,omitempty"`
 	Aliases  []string      `json:"aliases,omitempty"`
 	Affected []OSVAffected `json:"affected,omitempty"`
 }
