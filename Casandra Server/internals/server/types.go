@@ -1,9 +1,13 @@
 package server
 
+// SBOM
+// the shape of the SBOM we get from the user
+// source Casandra\ User\ Agent/ internals/sbom/types.go
 type SBOM struct {
 	Timestamp     string      `json:"timestamp"`
 	OS            string      `json:"os"`
 	OSVersion     string      `json:"os_version"`
+	OSEcosystem   string      `json:"OSEcosystem"`
 	KernelVersion string      `json:"kernel_version"`
 	Architecture  string      `json:"architecture"`
 	Hostname      string      `json:"hostname"`
