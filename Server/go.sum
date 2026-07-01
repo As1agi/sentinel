@@ -1,0 +1,8 @@
+github.com/hashicorp/go-version v1.9.0 h1:CeOIz6k+LoN3qX9Z0tyQrPtiB1DFYRPfCIBtaXPSCnA=
+github.com/hashicorp/go-version v1.9.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
+github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23 h1:dWzdsqjh1p2gNtRKqNwuBvKqMNwnLOPLzVZT1n6DK7s=
+github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23/go.mod h1:lUaIXCWzf7BRKTY5iEcrYy1TfgbYLYVIS/B2vPkJzOc=
+github.com/knqyf263/go-rpm-version v0.0.0-20240918084003-2afd7dc6a38f h1:xt29M2T6STgldg+WEP51gGePQCsQvklmP2eIhPIBK3g=
+github.com/knqyf263/go-rpm-version v0.0.0-20240918084003-2afd7dc6a38f/go.mod h1:i4sF0l1fFnY1aiw08QQSwVAFxHEm311Me3WsU/X7nL0=
+github.com/mattn/go-sqlite3 v1.14.47 h1:jOBI62gS7nKeZv+as1oGEy0+1qISgXwH/QBlR6KbfIo=
+github.com/mattn/go-sqlite3 v1.14.47/go.mod h1:6JTjA44L93a0QCyJef5YvlPoKXntQPjzWv5gtm9sB6w=

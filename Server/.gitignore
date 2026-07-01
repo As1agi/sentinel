@@ -1,0 +1,5 @@
+datasets/nvd
+datasets/osv
+datasets/*.json
+todo*
+.idea
