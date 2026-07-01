@@ -1,5 +1,0 @@
-pull the datasets from OSV.dev and NVD.nist.gov and merge them creating tables for relation of the data
-
-Write logic and code for comparing the user data agains the database data
-
-write workers for pulling and merging the data automatically
