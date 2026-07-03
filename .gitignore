@@ -34,3 +34,5 @@ go.work.sum
 #
 *.png
 *.jpg
+*.json
+TODO.*

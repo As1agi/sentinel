@@ -1,5 +1,9 @@
 package internals
 
+const (
+	cveSavePath = "../cve.json"
+)
+
 // SBOM
 // the shape of the SBOM we get from the user
 // source Casandra\ User\ Agent/ internals/sbom/types.go
@@ -25,4 +29,17 @@ type OSPackage struct {
 type Src struct {
 	SourceName    string `json:"source_name"`
 	SourceVersion string `json:"source_version"`
+}
+
+type CleanVulnerability struct {
+	AdvisoryID string `json:"advisory_id"`
+	//AffectedVersion []string `json:"affectedVersion"`
+	//EcosystemSpecific EcosystemSpecificBinaries `json:"ecosystem_specific"`
+	Upstream []string `json:"upstream,omitempty"`
+	//CVEIDs      []string `json:"cve_ids,omitempty"`
+	Ecosystem   string `json:"ecosystem"`
+	PackageName string `json:"package_name"`
+	Purl        string `json:"purl,omitempty"`
+	Introduced  string `json:"introduced"`
+	Fixed       string `json:"fixed"`
 }

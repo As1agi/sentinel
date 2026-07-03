@@ -26,3 +26,13 @@ type Src struct {
 	SourceName    string `json:"source_name"`
 	SourceVersion string `json:"source_version"`
 }
+
+type CleanVulnerability struct {
+	AdvisoryID  string   `json:"advisory_id"`
+	Upstream    []string `json:"upstream,omitempty"`
+	Ecosystem   string   `json:"ecosystem"`
+	PackageName string   `json:"package_name"`
+	Purl        string   `json:"purl,omitempty"`
+	Introduced  string   `json:"introduced"`
+	Fixed       string   `json:"fixed"`
+}

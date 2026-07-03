@@ -6,6 +6,7 @@ import (
 	"server/internals/database"
 )
 
+// TODO CREATE A SERVER STRUCT TO ALLOW HAVING A CONSTANT DATABASE
 func Serve() {
 	fmt.Println("Databasing...")
 	database.InitSchema()
