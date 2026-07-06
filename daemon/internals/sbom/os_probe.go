@@ -66,11 +66,11 @@ func GatherOSPackages(ctx context.Context) (*SBOM, error) {
 		name := parts[0]
 		version := parts[1]
 		pkgArch := strings.TrimSpace(parts[2])
-		src := getSourceInfo(parts[3], name)
+		src := getSourceInfo(parts[3], name, version)
 
 		// Generates valid PURLs matching the security tracking authority feed
 		//purl := fmt.Sprintf("pkg:deb/%s/%s@%s?arch=%s", trackingBase, name, version, pkgArch)
-		purl := fmt.Sprintf("pkg:deb/%s/%s?arch=%s&distro=%s", trackingBase, name, pkgArch, codename)
+		purl := fmt.Sprintf("pkg:deb/%s?arch=%s&distro=%s", name, pkgArch, codename)
 		return OSPackage{Name: name, Version: version, PURL: purl, Source: src}, true
 	}
 
@@ -91,7 +91,7 @@ func GatherOSPackages(ctx context.Context) (*SBOM, error) {
 		}
 	}
 
-	// Hardened: Intercept scanning buffer overflows explicitly
+	//Intercept scanning buffer overflows explicitly
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("package list stream processing truncated: %w", err)
 	}
@@ -103,19 +103,19 @@ func GatherOSPackages(ctx context.Context) (*SBOM, error) {
 	return packages, nil
 }
 
-func getSourceInfo(src string, packageName string) Src {
+func getSourceInfo(src string, packageName string, binVersion string) Src {
 	parts := strings.Fields(src)
 	srclen := len(parts)
 	var source Src
 	if srclen < 1 {
 		source.SourceVersion = ""
-		source.SourceName = packageName
+		source.SourceName = ""
 		return source
 	}
 
 	if srclen < 2 {
 		source.SourceName = parts[0]
-		source.SourceVersion = ""
+		source.SourceVersion = binVersion
 		return source
 	} else {
 		source.SourceName = parts[0]

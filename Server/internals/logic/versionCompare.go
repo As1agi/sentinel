@@ -15,6 +15,7 @@ const (
 	Safe           Result = 0
 	Vulnerable     Result = 1
 	InvalidVersion Result = -1
+	ErroNotVuln    Result = -2
 )
 
 // CheckVulnerability routes the version strings to the correct specification

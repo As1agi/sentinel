@@ -36,3 +36,7 @@ go.work.sum
 *.jpg
 *.json
 TODO.*
+
+./\*debian.zip
+./\*ubuntu.zip
+Server/database

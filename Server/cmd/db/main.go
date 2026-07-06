@@ -25,7 +25,7 @@ func main() {
 
 	err = dataset.CleanOSV(CVEDataPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error cleaning OSV data , %v\n", err)
 	}
 
 }

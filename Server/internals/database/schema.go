@@ -3,7 +3,7 @@ package database
 import "log"
 
 // database schemas
-// initSchema creates the necessary tables if they don't exist
+// InitSchema creates the necessary tables if they don't exist
 func InitSchema() {
 	db := OpenDB()
 	//enable pragma foreign key

@@ -13,8 +13,6 @@ type ProjectPaths struct {
 
 // ResolvePaths locates the project root by looking for go.mod, fallback to Env variables
 func ResolvePaths() (*ProjectPaths, error) {
-	//  Production Check: If an environment variable is explicitly set, use it.
-	// This is critical for Docker containers or production servers where source code/go.mod isn't deployed.
 	if prodRoot := os.Getenv("PROJECT_ROOT"); prodRoot != "" {
 		return &ProjectPaths{
 			Root: prodRoot,

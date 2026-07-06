@@ -147,7 +147,7 @@ func prepareBatchStatements(tx *sql.Tx) (*sql.Stmt, *sql.Stmt, error) {
 
 //todo break the function into micro functions for clean shits
 
-// InsertSBOm handles the 3-tier hierarchy registration and sync
+// InsertSBOM inserts SBOM data into the database
 func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 	// Start the transaction
 	tx, err := db.Begin()
@@ -155,7 +155,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	//Register or Retrieve the User (Hostname)
+	//Register or Retrieve the User
 
 	var userID int64
 	upsertUserQuery := `

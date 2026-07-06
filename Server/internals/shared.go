@@ -4,9 +4,17 @@ const (
 	cveSavePath = "../cve.json"
 )
 
+// VulnPackage is a struct with info about a vuln package which we display to the user
+type VulnPackage struct {
+	PackageName string `json:"package_name"`
+	Introduced  string `json:"introduced"`
+	Fixed       string `json:"fixed"`
+	Purl        string `json:"purl"`
+	//CVV later on and maybe a summary from AI on how to fix?
+}
+
 // SBOM
 // the shape of the SBOM we get from the user
-// source Casandra\ User\ Agent/ internals/sbom/types.go
 type SBOM struct {
 	Timestamp     string      `json:"timestamp"`
 	OS            string      `json:"os"`
@@ -19,6 +27,7 @@ type SBOM struct {
 	MachineID     string      `json:"machineID"`
 }
 
+// OSPackage is the structure for a single entry in the SBOM from the kernel
 type OSPackage struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
@@ -26,11 +35,14 @@ type OSPackage struct {
 	Source  Src    `json:"source"`
 }
 
+// Src is the structure for the source information of a package in the SBOM
+// can be nil if no source is available
 type Src struct {
 	SourceName    string `json:"source_name"`
 	SourceVersion string `json:"source_version"`
 }
 
+// CleanVulnerability is the final structure for the CVE data which is stored in the database
 type CleanVulnerability struct {
 	AdvisoryID string `json:"advisory_id"`
 	//AffectedVersion []string `json:"affectedVersion"`

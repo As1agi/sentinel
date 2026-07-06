@@ -16,7 +16,7 @@ var Config = AppConfig{
 }
 
 func PostSBOM(SBOMbytes []byte) error {
-	req, err := newPostRequest("sbomData", SBOMbytes, true)
+	req, err := newPostRequest("sbom", SBOMbytes, true)
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
