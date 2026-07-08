@@ -35,13 +35,28 @@ func InitSchema() {
 	if err != nil {
 		log.Fatalf("Failed to create packages table: %v", err)
 	}
-
+	_, err = db.Exec(CreateCVETableIndex)
+	if err != nil {
+		log.Fatalf("Failed to create packages table: %v", err)
+	}
+	_, err = db.Exec(CreateCVESBOMTableIndex)
+	if err != nil {
+		log.Fatalf("Failed to create packages table: %v", err)
+	}
 }
 
 const (
 	CreateUniqueConstraint = `
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_sboms_user_machine 
 		ON sboms(user_id, machine_id);
+`
+	CreateCVETableIndex = `
+	CREATE INDEX IF NOT EXISTS idx_cve_ecosystem_package
+ON cve(ecosystem, package_name);
+`
+	CreateCVESBOMTableIndex = `
+CREATE INDEX IF NOT EXISTS idx_packages_sbom_id
+ON packages(sbom_id, id);
 `
 
 	CreateSBOMDataTable = `

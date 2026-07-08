@@ -72,7 +72,7 @@ func TestMatchDebian(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := MatchDebian(tt.installed, tt.introduced, tt.fixed)
+			actual, _ := MatchDebian(tt.installed, tt.introduced, tt.fixed)
 			if actual != tt.expected {
 				t.Errorf("MatchDebian() failed for [%s]\nInput: inst=%s, intro=%s, fix=%s\nExpected: %d, Got: %d",
 					tt.name, tt.installed, tt.introduced, tt.fixed, tt.expected, actual)
@@ -121,7 +121,7 @@ func TestMatchRpm(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := MatchRpm(tt.installed, tt.introduced, tt.fixed)
+			actual, _ := MatchRpm(tt.installed, tt.introduced, tt.fixed)
 			if actual != tt.expected {
 				t.Errorf("MatchRpm() failed for [%s]\nExpected: %d, Got: %d", tt.name, tt.expected, actual)
 			}
@@ -169,7 +169,7 @@ func TestMatchSemver(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := MatchSemver(tt.installed, tt.introduced, tt.fixed)
+			actual, _ := MatchSemver(tt.installed, tt.introduced, tt.fixed)
 			if actual != tt.expected {
 				t.Errorf("MatchSemver() failed for [%s]\nExpected: %d, Got: %d", tt.name, tt.expected, actual)
 			}

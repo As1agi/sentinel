@@ -52,7 +52,7 @@ func GatherOSPackages(ctx context.Context) (*SBOM, error) {
 	}
 
 	// Isolate the upstream tracking target (e.g., "ubuntu" or "debian") for vulnerability mapping
-	trackingBase := strings.Split(distro.Ecosystem, ":")[0]
+	//trackingBase := strings.Split(distro.Ecosystem, ":")[0]
 
 	// Hardened: binary:Package shields against multi-arch colon corruption (e.g. libc6:i386)
 	formatStr := "${binary:Package}|${Version}|${Architecture}|${Source}\n"
@@ -108,7 +108,7 @@ func getSourceInfo(src string, packageName string, binVersion string) Src {
 	srclen := len(parts)
 	var source Src
 	if srclen < 1 {
-		source.SourceVersion = ""
+		source.SourceVersion = "" //flaw?
 		source.SourceName = ""
 		return source
 	}

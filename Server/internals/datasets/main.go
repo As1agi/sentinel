@@ -164,6 +164,10 @@ func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 	return records
 }
 
+// transform to a util
+// func to get the real cve ID and remove the prepended UUBUNTU-*ETC
+func getOsvCveId(advisoryID string) string {}
+
 // parseEvents tracks state across the event loop, appending metrics sequentially
 func parseEvents(events []OSVEvent, advisoryID string, cveIDs []string, upstream []string, ecosystem, pkgName string, purl string) []CleanVulnerability {
 	var records []CleanVulnerability

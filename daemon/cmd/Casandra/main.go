@@ -29,7 +29,7 @@ func main() {
 	}
 
 	log.Printf("%+v", string(jsonBytes))
-	
+
 	err = server.PostSBOM(jsonBytes)
 	if err != nil {
 		fmt.Printf("Serialization Error: %v\n", err)

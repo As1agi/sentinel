@@ -82,9 +82,10 @@ func (s *server) AuditPackages(hostname string, machineID string) {
 	//dont return nothing just add them directly to the database to save time and space later on
 
 	log.Printf("Auditing SBOM from user %v\n", hostname)
-	_, err := logic.AuditUserPackages(hostname, machineID, s.db)
+	packages, err := logic.AuditUserPackages(hostname, machineID, s.db)
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
+	fmt.Printf("\n\n\n vuln packages %++v\n", packages)
 
 }
