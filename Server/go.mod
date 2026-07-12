@@ -8,3 +8,5 @@ require (
 	github.com/knqyf263/go-rpm-version v0.0.0-20240918084003-2afd7dc6a38f
 	github.com/mattn/go-sqlite3 v1.14.47
 )
+
+require github.com/a-h/templ v0.3.1020

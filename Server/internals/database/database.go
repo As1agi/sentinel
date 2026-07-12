@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"server/internals"
+	"server/internals/logic"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -14,6 +15,17 @@ import (
 const (
 	BatchSize = 5000
 )
+
+// VulnPackage for now lets redeclare the VulnPackage
+type VulnPackage struct {
+	PackageName string `json:"package_name"`
+	Installed   string `json:"installed"`
+	Introduced  string `json:"introduced"`
+	Fixed       string `json:"fixed"`
+	Purl        string `json:"purl"`
+	CveId       string `json:"CveId"`
+	//CVV later on and maybe a summary from AI on how to fix?
+}
 
 // ReadCVEIntoDataBase reads in data from a json file which has an array of CleanVulnerability
 // into a database with the correct schema
@@ -41,7 +53,7 @@ func ReadCVEIntoDataBase(db *sql.DB, CVEDataPath string) {
 	defer func() { _ = tx.Rollback() }()
 
 	// Prepare statements *once* on the active transaction lifecycle
-	cveStmt, upstreamStmt, err := prepareBatchStatements(tx)
+	cveStmt, upstreamStmt, err := prepareBatchStatementsSBOMInsert(tx)
 	if err != nil {
 		log.Fatalf("Failed to prepare transaction statements: %v", err)
 	}
@@ -78,7 +90,7 @@ func ReadCVEIntoDataBase(db *sql.DB, CVEDataPath string) {
 			}
 
 			//Re-prepare statements tied to the brand new transaction frame
-			cveStmt, upstreamStmt, err = prepareBatchStatements(tx)
+			cveStmt, upstreamStmt, err = prepareBatchStatementsSBOMInsert(tx)
 			if err != nil {
 				log.Fatalf("Failed to refresh transaction statements: %v", err)
 			}
@@ -113,30 +125,6 @@ func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.Clea
 	}
 
 	return nil
-}
-
-// Micro-function: Compiles statements on top of the assigned transaction frame
-func prepareBatchStatements(tx *sql.Tx) (*sql.Stmt, *sql.Stmt, error) {
-	cveQuery := `
-    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed) 
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
-
-	upstreamQuery := `
-    INSERT INTO upstream (advisory_id, upstream_id) 
-    VALUES (?, ?) ON CONFLICT DO NOTHING;`
-
-	cveStmt, err := tx.Prepare(cveQuery)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	upstreamStmt, err := tx.Prepare(upstreamQuery)
-	if err != nil {
-		cveStmt.Close()
-		return nil, nil, err
-	}
-
-	return cveStmt, upstreamStmt, nil
 }
 
 //todo we need to set queries to retrieve the info linked to the machineID
@@ -234,42 +222,114 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 	return nil
 }
 
-// InsertCVE inserts a single CVE advisory into a database
-//func InsertCVE(db *sql.DB, insertStmt *sql.Stmt, cve internals.CleanVulnerability) error {
-//
-//	_, err := insertStmt.Exec(cve.AdvisoryID, cve.Ecosystem, cve.PackageName, cve.Purl, cve.Introduced, cve.Fixed)
-//	if err != nil {
-//		return fmt.Errorf("error inserting %v\n , errer :%v\n", cve.AdvisoryID, err)
-//	}
-//
-//	err = InsertUpstreamID(db, cve.Upstream, cve.AdvisoryID)
-//	if err != nil {
-//		return err
-//	}
-//
-//	return nil
-//
-//}
-//
-//func InsertUpstreamID(db *sql.DB, upstream []string, advisoryID string) error {
-//	if len(upstream) <= 0 {
-//		return nil
-//	}
-//
-//	query := `
-//	INSERT INTO upstream(advisory_id,upstream_id) VALUES(?,?) ON CONFLICT DO NOTHING
-//`
-//	stmt, err := db.Prepare(query)
-//	if err != nil {
-//		return fmt.Errorf("error preparing DB statement: %v\n", err)
-//	}
-//
-//	//beging inserting the upstream ID
-//	for _, upstreamId := range upstream {
-//		_, err = stmt.Exec(advisoryID, upstreamId)
-//		if err != nil {
-//			log.Printf("error inserting upstream ID:%v\n", err)
-//		}
-//	}
-//	return nil
-//}
+func InsertVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostName string, machineID string) error {
+	log.Printf("Inserting Vulnpackages for hostname:%v\n", hostName)
+	//todo make a better upsert
+	query := `
+	INSERT INTO vulnPackages(MachineID,HostName,packageName,Installed,Introduced,Fixed,Purl,CVE_ID)
+	VALUES (?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING 
+`
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction:%v\n", err)
+	}
+	//prepare insert statement
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("error preparing InsertVulnPackages Statement %v\n", err)
+	}
+	defer stmt.Close()
+	//todo use batching
+
+	//insert all the vuln packages into the DB
+	//p = package
+	for _, p := range vulnPackages {
+		if _, err = stmt.Exec(machineID, hostName, p.PackageName, p.Installed, p.Introduced, p.Fixed, p.Purl, p.CveId); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("\n error inserting vulnPackage %+v , %v", p, err)
+		}
+	}
+
+	//insert the vulnPackages
+	tx.Commit()
+	log.Printf("Done Inserting Vulnpackages for hostname:%v\n", hostName)
+	return nil
+}
+func FetchVulnPackages(db *sql.DB, hostName string, machineID string, offset int) []VulnPackage {
+	return nil
+}
+
+// GetAvailableMachines fetches all machines and maps their Machine ID to the corresponding Hostname.
+func GetAvailableMachines(db *sql.DB) (map[string]string, error) {
+	//   Combine both tables using an INNER JOIN to fetch all records in one roundtrip
+	query := `
+		SELECT s.machine_id, u.hostname 
+		FROM sboms s
+		INNER JOIN users u ON s.user_id = u.id
+		WHERE s.machine_id IS NOT NULL;
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute machines query: %w", err)
+	}
+	//  Defer closing rows to release the connection back to the pool safely
+	defer rows.Close()
+
+	// Initialize the map to prevent returning a nil map
+	machineMap := make(map[string]string)
+
+	//   Iterate through the dataset
+	for rows.Next() {
+		var machineID string
+		var hostname string
+
+		//  CRITICAL: Pass pointers (&) to Scan so values can be written
+		err := rows.Scan(&machineID, &hostname)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan machine row: %w", err)
+		}
+
+		// Key: Machine ID -> Value: Hostname
+		machineMap[machineID] = hostname
+	}
+
+	// 5. Always check for errors encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during row iteration: %w", err)
+	}
+
+	return machineMap, nil
+}
+
+func GetPaginatedVulnPackages(db *sql.DB, machineID string, limit int, offset int) ([]internals.VulnPackage, error) {
+	query := `
+		SELECT PackageName, CVE_ID,Installed, introduced, fixed, purl 
+		FROM vulnPackages 
+		WHERE machineId = ? 
+		ORDER BY PackageName ASC
+		LIMIT ? OFFSET ?;
+	`
+
+	rows, err := db.Query(query, machineID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var packages []internals.VulnPackage
+	for rows.Next() {
+		var pkg internals.VulnPackage
+		err := rows.Scan(&pkg.PackageName, &pkg.CveId, &pkg.Installed, &pkg.Introduced, &pkg.Fixed, &pkg.Purl)
+		if err != nil {
+			return nil, err
+		}
+		packages = append(packages, pkg)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return packages, nil
+}

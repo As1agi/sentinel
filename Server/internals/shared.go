@@ -7,9 +7,11 @@ const (
 // VulnPackage is a struct with info about a vuln package which we display to the user
 type VulnPackage struct {
 	PackageName string `json:"package_name"`
+	Installed   string `json:"installed"`
 	Introduced  string `json:"introduced"`
 	Fixed       string `json:"fixed"`
 	Purl        string `json:"purl"`
+	CveId       string `json:"CveId"`
 	//CVV later on and maybe a summary from AI on how to fix?
 }
 

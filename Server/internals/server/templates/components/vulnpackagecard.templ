@@ -1,0 +1,37 @@
+package components
+//takes the metadata as input
+import "server/internals"
+
+templ VulnPackageCard(vulnPackage internals.VulnPackage) {
+	 <div class="w-full flex-justify-between">
+
+                 <h3 class="font-bold text-lg">
+                     vulnPackage.PackageName
+                 </h3>
+                 <div class="grid grid-cols-2 gap-x-6 gap-y-2 mt-2 text-sm">
+
+                     <div>
+                         <span class="font-semibold">Installed:</span>
+                         NOT YET ADDED CHILLAX LIL NIGGA
+                     </div>
+
+                     <div>
+                         <span class="font-semibold">Introduced:</span>
+                         {vulnPackage.Introduced}
+                     </div>
+
+                     <div>
+                         <span class="font-semibold">Fixed:</span>
+                         {vulnPackage.Fixed}
+                     </div>
+
+                     <div>
+                         <span class="font-semibold">purl:</span>
+                         {vulnPackage.Purl}
+                        // <span class="badge badge-error">8.8</span>
+                     </div>
+
+                 </div>
+
+             </div>
+}

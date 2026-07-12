@@ -16,7 +16,7 @@ var Config = AppConfig{
 }
 
 func PostSBOM(SBOMbytes []byte) error {
-	req, err := newPostRequest("sbom", SBOMbytes, true)
+	req, err := newPostRequest("/api/v1/sbom", SBOMbytes, true)
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -39,7 +39,7 @@ func newPostRequest(serverEndpoint string, data []byte, localHost bool) (*http.R
 	var baseURL string
 
 	if localHost {
-		baseURL = "http://localhost:8080/api"
+		baseURL = "http://localhost:8080"
 	} else {
 		baseURL = Config.ProdBaseURL
 	}

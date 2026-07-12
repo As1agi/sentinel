@@ -39,4 +39,9 @@ TODO.*
 
 ./\*debian.zip
 ./\*ubuntu.zip
+*ubuntu.zip
+*debian.zip
 Server/database
+
+node_modules
+tmp

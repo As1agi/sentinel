@@ -165,8 +165,19 @@ func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 }
 
 // transform to a util
-// func to get the real cve ID and remove the prepended UUBUNTU-*ETC
-func getOsvCveId(advisoryID string) string {}
+// func to get the real cve ID and remove the prepended UBUNTU-*ETC
+func getOsvCveId(advisoryID string) string {
+	// Split into a maximum of 2 parts: ["UBUNTU", "CVE-2022-0987"]
+	parts := strings.SplitN(advisoryID, "-", 2)
+
+	if len(parts) < 2 {
+		fmt.Println("Invalid advisory format")
+		return advisoryID
+	}
+
+	cveID := parts[1]
+	return cveID
+}
 
 // parseEvents tracks state across the event loop, appending metrics sequentially
 func parseEvents(events []OSVEvent, advisoryID string, cveIDs []string, upstream []string, ecosystem, pkgName string, purl string) []CleanVulnerability {
@@ -181,7 +192,7 @@ func parseEvents(events []OSVEvent, advisoryID string, cveIDs []string, upstream
 			// If introduced is the final event in the array, the bug is unpatched
 			if i == totalEvents-1 {
 				records = append(records, CleanVulnerability{
-					AdvisoryID: advisoryID,
+					AdvisoryID: getOsvCveId(advisoryID),
 					//CVEIDs:      cveIDs,
 					Upstream:    upstream,
 					Ecosystem:   strings.ToLower(ecosystem),
@@ -197,7 +208,7 @@ func parseEvents(events []OSVEvent, advisoryID string, cveIDs []string, upstream
 
 		if event.Fixed != "" {
 			records = append(records, CleanVulnerability{
-				AdvisoryID: advisoryID,
+				AdvisoryID: getOsvCveId(advisoryID),
 				//CVEIDs:      cveIDs,
 				Upstream:    upstream,
 				Ecosystem:   strings.ToLower(ecosystem),

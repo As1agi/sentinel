@@ -118,7 +118,7 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 				//log.Printf("Checked package %+v for vulnerabilities\n found:none\n Error:%v\n", pkg, err)
 				continue
 			}
-			log.Printf("Found vulnerabilities in package %+v\nFound:1\nVuln Pkg:%+v\n", pkg, vulnPkg)
+			//log.Printf("Found vulnerabilities in package %+v\nFound:1\nVuln Pkg:%+v\n", pkg, vulnPkg)
 			vulnPackages = append(vulnPackages, vulnPkg)
 			vulnCount++
 			//todo later on to prevent nuking our ram, we update the database in batches of 5 vulnPackages at a tim
@@ -178,7 +178,7 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 				return VulnPackage{}, nil
 			} //beyond this point thy package is vulnerable
 
-			log.Printf("\nmatched Package name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
+			//log.Printf("\nmatched Package name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
 			pkg := VulnPackage{
 				PackageName: osPackage.Name,
 				Installed:   osPackage.Version,
@@ -197,7 +197,7 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 			} else if result == Safe {
 				return VulnPackage{}, nil
 			} //yeep it is vuln if it goes beyond this point
-			log.Printf("\nmatched Source name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
+			//log.Printf("\nmatched Source name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
 			//todo merge the two into one for cleaner code
 			pkg := VulnPackage{
 				PackageName: osPackage.Source.SourceName,

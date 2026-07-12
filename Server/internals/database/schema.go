@@ -2,8 +2,8 @@ package database
 
 import "log"
 
-// database schemas
 // InitSchema creates the necessary tables if they don't exist
+// wondering why the code is so ugly here?...😮‍💨
 func InitSchema() {
 	db := OpenDB()
 	//enable pragma foreign key
@@ -17,11 +17,11 @@ func InitSchema() {
 	}
 	_, err = db.Exec(CreatePackagesTable)
 	if err != nil {
-		log.Fatalf("Failed to create packages table: %v", err)
+		log.Fatalf("Failed to create  packages table: %v", err)
 	}
 	_, err = db.Exec(CreateUserTable)
 	if err != nil {
-		log.Fatalf("Failed to create packages table: %v", err)
+		log.Fatalf("Failed to create users  table: %v", err)
 	}
 	_, err = db.Exec(CreateUniqueConstraint)
 	if err != nil {
@@ -42,6 +42,14 @@ func InitSchema() {
 	_, err = db.Exec(CreateCVESBOMTableIndex)
 	if err != nil {
 		log.Fatalf("Failed to create packages table: %v", err)
+	}
+	_, err = db.Exec(CreateCVESBOMTableIndex)
+	if err != nil {
+		log.Fatalf("Failed to create packages table: %v", err)
+	}
+	_, err = db.Exec(CreateVulnPackagesTable)
+	if err != nil {
+		log.Fatalf("Failed to create vuln packages table: %v", err)
 	}
 }
 
@@ -111,6 +119,19 @@ CREATE TABLE IF NOT EXISTS packages (
 	     advisory_id TEXT NOT NULL ,
 	     upstream_id TEXT NOT NULL ,
 	     UNIQUE(advisory_id,upstream_id)
-	    )
-`
+	    )`
+
+	CreateVulnPackagesTable = `
+	CREATE TABLE IF NOT EXISTS vulnPackages(
+		id INTEGER PRIMARY KEY  AUTOINCREMENT ,
+		PackageName TEXT NOT NULL ,
+		Installed TEXT NOT NULL,
+		Introduced TEXT NOT NULL ,
+		Fixed TEXT NOT NULL ,
+		MachineID TEXT NOT NULL ,
+		HostName TEXT NOT NULL ,   
+		Purl TEXT NOT NULL ,
+		CVE_ID TEXT NOT NULL ,      
+		UNIQUE (PackageName,MachineID,HostName) 
+		)`
 )

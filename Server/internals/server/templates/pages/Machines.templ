@@ -1,0 +1,38 @@
+package pages
+
+import "server/internals/server/templates/layouts"
+
+//shows a list of the available machines and their machine ID+Name and when clicked we fetch
+//the vuln packages for the machine
+
+//RenderSBOM renders all the availabe machines from a map with the key as machineID and value as hostname
+templ RenderSBOM(machineList map[string]string) {
+	@layouts.MainFrame("Machines",machinesTable(machineList))
+}
+
+//createMachineList creates the cards for the available machines from the input map
+//key is the machineID and value is the name of the machine
+
+
+//the template for the machineCard
+templ machinesTable(machineList map[string]string) {
+	<div class="m-2 grid grid-cols-2 gap-4 overflow-auto bg-amber-200 p-4 font-mono text-sm rounded">
+      <!-- Header Row -->
+      <div class="font-bold text-amber-900 hover:bg-amber-400 active:bg-amber-950 active:text-white p-1 transition">Name</div>
+      <div class="font-bold text-amber-900 p-1">MachineID</div>
+        for id,name := range machineList{
+               @machineRow(name,id)
+        }
+    </div>
+}
+
+templ machineRow(name string, ID string) {
+<!-- Data Row -->
+<a
+		href={ string(templ.URL("/machines/" + ID+"/vulns")) }
+		class="col-span-2 grid grid-cols-2 hover:bg-amber-300 p-1 rounded transition block group no-underline"
+	>
+		<div class="text-gray-800 group-hover:text-amber-950 font-medium">{ name }</div>
+		<div class="text-gray-600 break-all font-light">{ ID }</div>
+	</a>
+}

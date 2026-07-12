@@ -1,0 +1,75 @@
+package pages
+
+import (
+	"fmt"
+	"server/internals"
+	"server/internals/server/templates/layouts"
+)
+
+// RenderVulnPackages wraps the whole page layout on initial load
+templ RenderVulnPackages(vulnPackages []internals.VulnPackage, machineID string, nextOffset int) {
+	@layouts.MainFrame("Vulnerabilities", VulnPackagePageContainer(vulnPackages, machineID, nextOffset))
+}
+
+// VulnPackagePageContainer builds the alert box and iterates through items
+templ VulnPackagePageContainer(vulnPackages []internals.VulnPackage, machineID string, nextOffset int) {
+	<div role="alert" class="alert alert-warning items-start flex flex-col gap-4 w-full">
+		<div class="flex items-center gap-2">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+			</svg>
+			<span class="font-bold text-lg">Vulnerable Packages Identified</span>
+		</div>
+
+		<div id="vuln-list-contents" class="w-full space-y-4">
+			@VulnListRows(vulnPackages, machineID, nextOffset)
+		</div>
+	</div>
+}
+
+// VulnListRows isolated for HTMX infinite scrolling / pagination appending
+templ VulnListRows(vulnPackages []internals.VulnPackage, machineID string, nextOffset int) {
+	for _, pkg := range vulnPackages {
+		@VulnPackageCard(pkg)
+	}
+
+	if nextOffset > 0 {
+		<div id="load-more-container" class="w-full flex justify-center pt-2">
+			<button
+				hx-get={ string(templ.URL(fmt.Sprintf("/machines/%s/vulns?offset=%d", machineID, nextOffset))) }
+				hx-target="#load-more-container"
+				hx-swap="outerHTML"
+				class="btn btn-sm btn-outline btn-primary"
+			>
+				Load More Packages
+			</button>
+		</div>
+	}
+}
+
+templ VulnPackageCard(vulnPackage internals.VulnPackage) {
+	<div class="w-full flex flex-col border-b border-amber-300 pb-3 last:border-none">
+		<h3 class="font-bold text-base text-amber-950">
+			{ vulnPackage.PackageName }
+		</h3>
+
+		<div class="grid grid-cols-2 gap-x-6 gap-y-2 mt-1 text-sm text-gray-800">
+			<div>
+				<span class="font-semibold text-gray-900">Installed:</span>
+				{ vulnPackage.Installed }
+			</div>
+			<div>
+				<span class="font-semibold text-gray-900">Introduced:</span>
+				{ vulnPackage.Introduced }
+			</div>
+			<div>
+				<span class="font-semibold text-gray-900">Fixed:</span>
+				{ vulnPackage.Fixed }
+			</div>
+			<div class="break-all">
+				<span class="font-semibold text-gray-900">CVE-ID:</span>
+				{ vulnPackage.CveId }
+			</div>
+		</div>
+	</div>
+}
