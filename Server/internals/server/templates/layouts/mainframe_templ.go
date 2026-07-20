@@ -31,7 +31,20 @@ func MainFrame(current string, content templ.Component) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><title></title><head><title>title</title><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"stylesheet\" href=\"/static/output.css\"><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script></head><div class=\"drawer lg:drawer-open\"><input id=\"my-drawer-4\" type=\"checkbox\" class=\"drawer-toggle\"><div class=\"drawer-content\"><!-- Navbar --><nav class=\"navbar w-full bg-base-300\"><label for=\"my-drawer-4\" aria-label=\"open sidebar\" class=\"btn btn-square btn-ghost\"><!-- Sidebar toggle icon --><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" stroke-linejoin=\"round\" stroke-linecap=\"round\" stroke-width=\"2\" fill=\"none\" stroke=\"currentColor\" class=\"my-1.5 inline-block size-4\"><path d=\"M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z\"></path><path d=\"M9 4v16\"></path><path d=\"M14 10l2 2l-2 2\"></path></svg></label><div class=\"px-4\">Navbar Title</div></nav>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><title></title><head><title>title</title><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><link rel=\"stylesheet\" href=\"/static/output.css\"><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script></head><div class=\"drawer lg:drawer-open\"><input id=\"my-drawer-4\" type=\"checkbox\" class=\"drawer-toggle\"><div class=\"drawer-content\"><!-- Navbar --><nav class=\"navbar w-full bg-base-300\"><label for=\"my-drawer-4\" aria-label=\"open sidebar\" class=\"btn btn-square btn-ghost\"><!-- Sidebar toggle icon --><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" stroke-linejoin=\"round\" stroke-linecap=\"round\" stroke-width=\"2\" fill=\"none\" stroke=\"currentColor\" class=\"my-1.5 inline-block size-4\"><path d=\"M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z\"></path><path d=\"M9 4v16\"></path><path d=\"M14 10l2 2l-2 2\"></path></svg></label><div class=\"px-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(current)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/layouts/mainframe.templ`, Line: 27, Col: 47}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></nav><!-- Navbar -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -39,7 +52,7 @@ func MainFrame(current string, content templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<!-- Page content here --><div id=\"main-content\" class=\"p-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<!-- Page content here --><div id=\"main-content\" class=\"p-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -47,7 +60,7 @@ func MainFrame(current string, content templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></div></div></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div></div></div></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

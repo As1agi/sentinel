@@ -55,5 +55,5 @@ tmp_dir = "tmp"
   proxy_port = 20000
 
 [screen]
-  clear_on_rebuild = false
+  clear_on_rebuild = true
   keep_scroll = true

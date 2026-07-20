@@ -19,7 +19,6 @@ func OpenDB() *sql.DB {
 	return db
 }
 
-// Micro-function: Compiles statements on top of the assigned transaction frame
 func prepareBatchStatementsSBOMInsert(tx *sql.Tx) (*sql.Stmt, *sql.Stmt, error) {
 	cveQuery := `
     INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed) 

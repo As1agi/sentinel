@@ -2,13 +2,13 @@
 
 dev:
 	@echo "Starting development environment..."
-	# 1. Run Tailwind compiler in the background
+	# Run Tailwind compiler in the background
 	npx @tailwindcss/cli -i ./internals/server/assets/css/input.css -o ./internals/server/assets/static/output.css --watch & \
 	TAILWIND_PID=$$!; \
-	# 2. Run Templ generator in the background
+	# Run Templ generator in the background
 	templ generate --watch & \
 	TEMPL_PID=$$!; \
-	# 3. Run Air in the foreground to anchor the terminal
+	#   Run Air in the foreground to anchor the terminal
 	air; \
 	# Cleanup: Kill background processes when Air exits
 	echo "Shutting down proxies and watchers..."; \

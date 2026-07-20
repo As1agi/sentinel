@@ -127,12 +127,6 @@ func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.Clea
 	return nil
 }
 
-//todo we need to set queries to retrieve the info linked to the machineID
-// we use the SBOM id to get the package names
-//	so for all users we get the SBOMs then we get the use the ID of each SBOM to get the packages
-//  then once we find the vuln packages we sort of like send them in batches.. per SBOM, so we scan one SBOM
-//  then we send the vulns and stuff if they exist
-
 //todo break the function into micro functions for clean shits
 
 // InsertSBOM inserts SBOM data into the database
@@ -294,7 +288,7 @@ func GetAvailableMachines(db *sql.DB) (map[string]string, error) {
 		machineMap[machineID] = hostname
 	}
 
-	// 5. Always check for errors encountered during iteration
+	//   Always check for errors encountered during iteration
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error during row iteration: %w", err)
 	}

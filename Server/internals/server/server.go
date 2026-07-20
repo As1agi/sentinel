@@ -25,10 +25,10 @@ func init() {
 // TODO CREATE A SERVER STRUCT TO ALLOW HAVING A CONSTANT DATABASE
 func Serve() {
 
-	fmt.Println("Server running on :8080...")
+	fmt.Println("Server running on http://localhost:8080/")
 	//todo remove once we use a server struct
-	root, _ := config.ResolvePaths()
-	databasepath := path.Join(root.Root, "database")
+	Paths, _ := config.ResolvePaths()
+	databasepath := path.Join(Paths.Root, "database")
 	db, err := sql.Open("sqlite3", databasepath)
 
 	if err != nil {
@@ -46,11 +46,6 @@ func Serve() {
 	mux.HandleFunc("GET /machines/{machineID}/vulns", svr.RenderVulnPackages)
 	//mux.HandleFunc("GET /dashboard", svr.Home)
 
-	//todo trigger a job to check for the packages for CVEs here, once we receiver a new request
-	//	 	then immediately send back the OK to the user, dont disturb them
-	//      we may have to create a new worker I guess that actively listens for requests to sort of like check for
-	//		vulnerablities
-
 	fmt.Println("Server running on :8080...")
 	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
 		fmt.Printf("Server failed: %v\n", err)
@@ -58,7 +53,7 @@ func Serve() {
 }
 
 func (s *server) RenderVulnPackages(w http.ResponseWriter, r *http.Request) {
-	//get vuln packages from machineID
+	//get  machineID
 	machineID := r.PathValue("machineID")
 	if machineID == "" {
 		http.Error(w, "Missing Machine ID parameter", http.StatusBadRequest)
@@ -75,7 +70,7 @@ func (s *server) RenderVulnPackages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	limit := 25
+	limit := 10
 	vulnPackages, err := database.GetPaginatedVulnPackages(s.db, machineID, limit, offset)
 	if err != nil {
 		log.Printf("Database retrieval failure: %v", err)
@@ -89,7 +84,7 @@ func (s *server) RenderVulnPackages(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	// 5. HTMX Optimization Request Branching
+	// HTMX Optimization Request Branching
 	// If it's an HTMX load-more request, we only render the new rows fragment, not the whole MainFrame page layout
 	if r.Header.Get("HX-Request") == "true" {
 		err = pages.VulnListRows(vulnPackages, machineID, nextOffset).Render(r.Context(), w)
