@@ -1,4 +1,0 @@
-Ubuntu: https://storage.googleapis.com/osv-vulnerabilities/Ubuntu/all.zip
-Debian: https://storage.googleapis.com/osv-vulnerabilities/Debian/all.zip
-Rocky Linux: https://storage.googleapis.com/osv-vulnerabilities/Rocky%20Linux/all.zip
-AlmaLinux: https://storage.googleapis.com/osv-vulnerabilities/AlmaLinux/all.zip
