@@ -1,4 +1,4 @@
-package server
+package main
 
 // SBOM
 // the shape of the SBOM we get from the user

@@ -23,7 +23,7 @@ func init() {
 }
 
 // TODO CREATE A SERVER STRUCT TO ALLOW HAVING A CONSTANT DATABASE
-func Serve() {
+func Serve(port string) {
 
 	fmt.Println("Server running on http://localhost:8080/")
 	//todo remove once we use a server struct

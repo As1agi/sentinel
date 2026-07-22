@@ -1,13 +1,12 @@
 package dataset
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
 	"os"
-	path2 "path"
+	"path"
 	"path/filepath"
 	_ "runtime"
 	_ "runtime/debug"
@@ -19,32 +18,6 @@ import (
 type CleanVulnerability internals.CleanVulnerability
 
 // main function
-func upsertDatabase(db *sql.DB) {
-	//limit := int64(100 << 20)
-	//debug.SetMemoryLimit(limit)
-	//fmt.Printf("Set Memory limit to %v\n", limit)
-	//// Set the runtime to use 4 cores
-	//runtime.GOMAXPROCS(1)
-	//// Query the active number of allocated threads
-	//currentProcs := runtime.GOMAXPROCS(0)
-	//fmt.Printf("Current GOMAXPROCS: %d\n", currentProcs)
-	//CleanOSV()
-	////todo create logic to create a persistent path
-	//database.ReadCVEIntoDataBase(db, outputFile)
-	//read the data into the database after creating a clean json file
-}
-
-//todo make the func resolve the root path for the raw data only the we can use path.join() to get specific data
-
-// resolveCVEJSONSourcePath returns the path where the raw JSON CVE data is stored
-func getCVEJSONSourcePath() (string, error) {
-	root, err := config.ResolvePaths()
-	if err != nil {
-		return "", err
-	}
-	p := path2.Join(root.Root, "internals", "datasets")
-	return p, nil
-}
 
 // CleanOSV transforms the raw OSV.dev CVE data and saves it to the cveSavePath
 func CleanOSV(cveSavePath string) error {
@@ -53,11 +26,13 @@ func CleanOSV(cveSavePath string) error {
 		recordCount   = 0
 		isFirstRecord = true
 	)
-
-	sourceDir, err := getCVEJSONSourcePath()
+	//todo use a system directory for harmony
+	projectPaths, err := config.ResolvePaths()
 	if err != nil {
 		return err
 	}
+	//the directory for the OSV data
+	sourceDir := path.Join(projectPaths.CveDataPath, "osv")
 
 	fmt.Println("[*] Starting traversal of OSV data directories...")
 
