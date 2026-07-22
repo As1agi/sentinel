@@ -12,6 +12,7 @@ var serverCmd = &cobra.Command{
 		if port != "nil" {
 			server.Serve(port)
 		} else {
+
 			server.Serve("8080")
 		}
 		return nil

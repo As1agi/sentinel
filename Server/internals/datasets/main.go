@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	_ "runtime"
 	_ "runtime/debug"
@@ -20,26 +19,30 @@ type CleanVulnerability internals.CleanVulnerability
 // main function
 
 // CleanOSV transforms the raw OSV.dev CVE data and saves it to the cveSavePath
-func CleanOSV(cveSavePath string) error {
+func CleanOSV() error {
 	var (
 		fileCount     = 0
 		recordCount   = 0
 		isFirstRecord = true
 	)
-	//todo use a system directory for harmony
-	projectPaths, err := config.ResolvePaths()
+
+	//the directory for the raw OSV data
+	sourceDir, err := config.GetRawOsvDir()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w\n", err)
 	}
-	//the directory for the OSV data
-	sourceDir := path.Join(projectPaths.CveDataPath, "osv")
+
+	JsonCveSavePath, err := config.GetCleanOsvJsonPath()
+	if err != nil {
+		return fmt.Errorf("%w\n", err)
+	}
 
 	fmt.Println("[*] Starting traversal of OSV data directories...")
 
 	// Open the file immediately for writing
-	outFile, err := os.Create(cveSavePath)
+	outFile, err := os.Create(JsonCveSavePath)
 	if err != nil {
-		log.Fatalf("[-] Failed to create output file: %v", err)
+		return fmt.Errorf("error creating output file : %w\n", err)
 	}
 	defer outFile.Close()
 
@@ -48,6 +51,9 @@ func CleanOSV(cveSavePath string) error {
 		log.Printf("error:%+v", err)
 	}
 
+	//todo split into a re-usable function
+
+	//walk the directory and clean all the json files then write them directly to disk file
 	err = filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -106,13 +112,11 @@ func CleanOSV(cveSavePath string) error {
 	_, _ = outFile.WriteString("\n]")
 
 	fmt.Printf("[+] Parsed %d raw files.\n", fileCount)
-	fmt.Printf("[==>] Successfully streamed %d flat records straight to: %s\n", recordCount, cveSavePath)
+	fmt.Printf("[==>] Successfully streamed %d flat records straight to: %s\n", recordCount, JsonCveSavePath)
 	return nil
 }
 
-// todo to make everything more space efficient change the layout so we dont have to have redundant upstream
-//
-// cleanVuln  builds and returns a SLICE of vulnerabilities to keep loops alive
+// cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by the vulnerability
 func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 
 	var records []CleanVulnerability
@@ -121,9 +125,6 @@ func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 		ecosystem := affected.Package.Ecosystem
 		pkgName := affected.Package.Name
 		purl := affected.Package.Purl
-		//affectedVersions := affected.Versions
-		//removed to make the data lighter
-		//SpecificEcosystemBinaries := affected.EcosystemSpecific
 
 		for _, r := range affected.Ranges {
 			if r.Type != "ECOSYSTEM" {
@@ -167,34 +168,28 @@ func parseEvents(events []OSVEvent, advisoryID string, cveIDs []string, upstream
 			// If introduced is the final event in the array, the bug is unpatched
 			if i == totalEvents-1 {
 				records = append(records, CleanVulnerability{
-					AdvisoryID: getOsvCveId(advisoryID),
-					//CVEIDs:      cveIDs,
+					AdvisoryID:  getOsvCveId(advisoryID),
 					Upstream:    upstream,
 					Ecosystem:   strings.ToLower(ecosystem),
 					PackageName: pkgName,
 					Purl:        purl,
 					Introduced:  currentIntroduced,
-					//AffectedVersion: versionsAffected,
-					//EcosystemSpecific: ecosystemspecific,
-					Fixed: "unfixed",
+					Fixed:       "unfixed",
 				})
 			}
 		}
 
 		if event.Fixed != "" {
 			records = append(records, CleanVulnerability{
-				AdvisoryID: getOsvCveId(advisoryID),
-				//CVEIDs:      cveIDs,
+				AdvisoryID:  getOsvCveId(advisoryID),
 				Upstream:    upstream,
 				Ecosystem:   strings.ToLower(ecosystem),
 				PackageName: pkgName,
 				Purl:        purl,
 				Introduced:  currentIntroduced,
-				//AffectedVersion: versionsAffected,
-				//EcosystemSpecific: ecosystemspecific,
-				Fixed: event.Fixed,
+				Fixed:       event.Fixed,
 			})
-			currentIntroduced = "" // Clear state for back-to-back ranges
+			currentIntroduced = "" // Clear state for back to back ranges
 		}
 	}
 	return records

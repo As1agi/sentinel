@@ -29,8 +29,8 @@ type VulnPackage struct {
 
 // ReadCVEIntoDataBase reads in data from a json file which has an array of CleanVulnerability
 // into a database with the correct schema
-func ReadCVEIntoDataBase(db *sql.DB, CVEDataPath string) {
-	file, err := os.Open(CVEDataPath)
+func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
+	file, err := os.Open(CveJsonPath)
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}

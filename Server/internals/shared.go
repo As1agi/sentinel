@@ -1,9 +1,5 @@
 package internals
 
-const (
-	cveSavePath = "../cve.json"
-)
-
 // VulnPackage is a struct with info about a vuln package which we display to the user
 type VulnPackage struct {
 	PackageName string `json:"package_name"`
@@ -46,14 +42,11 @@ type Src struct {
 
 // CleanVulnerability is the final structure for the CVE data which is stored in the database
 type CleanVulnerability struct {
-	AdvisoryID string `json:"advisory_id"`
-	//AffectedVersion []string `json:"affectedVersion"`
-	//EcosystemSpecific EcosystemSpecificBinaries `json:"ecosystem_specific"`
-	Upstream []string `json:"upstream,omitempty"`
-	//CVEIDs      []string `json:"cve_ids,omitempty"`
-	Ecosystem   string `json:"ecosystem"`
-	PackageName string `json:"package_name"`
-	Purl        string `json:"purl,omitempty"`
-	Introduced  string `json:"introduced"`
-	Fixed       string `json:"fixed"`
+	AdvisoryID  string   `json:"advisory_id"`
+	Upstream    []string `json:"upstream,omitempty"`
+	Ecosystem   string   `json:"ecosystem"`
+	PackageName string   `json:"package_name"`
+	Purl        string   `json:"purl,omitempty"`
+	Introduced  string   `json:"introduced"`
+	Fixed       string   `json:"fixed"`
 }

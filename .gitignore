@@ -34,14 +34,9 @@ go.work.sum
 #
 *.png
 *.jpg
-*.json
-TODO.*
+*.json 
+*.txt
 
-./\*debian.zip
-./\*ubuntu.zip
-*ubuntu.zip
-*debian.zip
-Server/database
-
+assets
 node_modules
 tmp
