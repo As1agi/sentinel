@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 )
 
-// ProjectPaths holds the absolute paths for your application components
+// ProjectPaths holds the absolute paths for your application components for development
 type ProjectPaths struct {
-	Root string
+	Root        string
+	CveDataPath string
 }
 
 // ResolvePaths locates the project root by looking for go.mod, fallback to Env variables
@@ -32,6 +33,7 @@ func ResolvePaths() (*ProjectPaths, error) {
 			absRoot, _ := filepath.Abs(dir)
 			return &ProjectPaths{
 				Root: absRoot,
+				//CveDataPath: path.Join(absRoot, "ata"),
 			}, nil
 		}
 
