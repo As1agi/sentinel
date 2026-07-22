@@ -3,17 +3,19 @@ package database
 import (
 	"database/sql"
 	"log"
-)
-
-const (
-	dbPath = "./database"
+	"server/internals/config"
 )
 
 func OpenDB() *sql.DB {
-	log.Printf("Opening DB")
-	db, err := sql.Open("sqlite3", dbPath)
+	log.Printf("Opening DataBase")
+	dataBasePath, err := config.GetDBPath()
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("error opening database : %v\n", err)
+	}
+	db, err := sql.Open("sqlite3", dataBasePath)
+	if err != nil {
+		log.Fatalf("cant open the db at path :%v\n err:%v\n", dataBasePath, err)
 	}
 	// 2. Enable Foreign Keys (SQLite disables them by default for backwards compatibility)
 	return db

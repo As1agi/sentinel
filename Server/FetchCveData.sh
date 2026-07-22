@@ -1,31 +1,27 @@
 #!/bin/bash
 set -eou pipefail
 
-#Ubuntu: https://storage.googleapis.com/osv-vulnerabilities/Ubuntu/all.zip
-#Debian: https://storage.googleapis.com/osv-vulnerabilities/Debian/all.zip
-#Rocky Linux: https://storage.googleapis.com/osv-vulnerabilities/Rocky%20Linux/all.zip
-#AlmaLinux: https://storage.googleapis.com/osv-vulnerabilities/AlmaLinux/all.zip
+BASE_DIR="${HOME}/.local/share/sentinel"
+OSV_DIR="${BASE_DIR}/data/cve/osv/raw"
 
-# Gets the absolute path of the directory containing THIS script file
-BASE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-UBUNTU_DIR="${BASE_DIR}/data/osv/ubuntu"
-DEBIAN_DIR="${BASE_DIR}/data/osv/debian"
+DISTROS=("Ubuntu" "Debian")
 
-#ensure the directories exist
-mkdir -p "${UBUNTU_DIR}" "$DEBIAN_DIR"
+for distro in "${DISTROS[@]}"; do
+    # Convert to lowercase for local folder structure (Ubuntu -> ubuntu)
+    distro_lower=$(echo "${distro}" | tr '[:upper:]' '[:lower:]')
+    target_dir="${OSV_DIR}/${distro_lower}"
+    zip_file="${target_dir}/${distro_lower}.zip"
+    url="https://storage.googleapis.com/osv-vulnerabilities/${distro}/all.zip"
 
-#Get the Ubuntu data and save it in ubuntu.zip
-echo "[*] Downloading Ubuntu data"
-wget -q -O "${UBUNTU_DIR}/ubuntu.zip" --show-progress   https://storage.googleapis.com/osv-vulnerabilities/Ubuntu/all.zip
+    mkdir -p "${target_dir}"
 
-#Get the Debian data and save it
-echo "[*] Downloading Debian data"
-wget -q -O "${DEBIAN_DIR}/debian.zip" --show-progress  https://storage.googleapis.com/osv-vulnerabilities/Debian/all.zip
+    echo "[*] Downloading ${distro} data..."
+    wget -q -O "${zip_file}" --show-progress "${url}"
 
-echo "[*] Extracting Debian advisories..."
-unzip -q -o "${DEBIAN_DIR}/debian.zip" -d "${DEBIAN_DIR}" && rm "${DEBIAN_DIR}/debian.zip"
+    echo "[*] Extracting ${distro} advisories..."
+    unzip -q -o "${zip_file}" -d "${target_dir}"
+    rm -f "${zip_file}"
+done
 
-echo "[*] Extracting Ubuntu advisories..."
-unzip -q -o "${UBUNTU_DIR}/ubuntu.zip" -d "${UBUNTU_DIR}" && rm "${UBUNTU_DIR}/ubuntu.zip"
-
+echo "[+] Done. Data extracted to ${OSV_DIR}"

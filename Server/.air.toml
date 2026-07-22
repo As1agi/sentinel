@@ -1,58 +1,62 @@
 #:schema https://json.schemastore.org/any.json
 
-env_files = []
 root = "."
-testdata_dir = "testdata"
 tmp_dir = "tmp"
+testdata_dir = "testdata"
+env_files = []
 
 [build]
-  args_bin = []
+    cmd = "go build -o ./tmp/main ./main.go"
+
+  # Binary path ONLY (no arguments here)
   bin = "./tmp/main"
-  cmd = "go build -o ./tmp/main ./cmd/cassandra/main.go"
+
+  # Arguments passed to your Go binary on execution
+  args_bin = ["server"]
+
   delay = 1000
-  entrypoint = ["./tmp/main"]
-  exclude_dir = ["assets", "tmp", "vendor", "testdata","node_modules","internals/server/assets/static"]
+
+  # Added "templ" so Air notices Templ file modifications
+  include_ext = ["go", "tpl", "tmpl", "html", "templ"]
+
+  exclude_dir = [
+    "assets",
+    "tmp",
+    "html",
+    "vendor",
+    "testdata",
+    "node_modules",
+    "internals/server/assets/static"
+  ]
   exclude_file = []
   exclude_regex = ["_test.go"]
-  exclude_unchanged = false
-  follow_symlink = false
-  full_bin = ""
-  ignore_dangerous_root_dir = false
-  include_dir = []
-  include_ext = ["go", "tpl", "tmpl", "html"]
-  include_file = []
+
   kill_delay = "0s"
-  log = "build-errors.log"
-  poll = false
-  poll_interval = 0
-  post_cmd = []
-  pre_cmd = []
   rerun = false
   rerun_delay = 500
   send_interrupt = false
   stop_on_error = false
+  log = "build-errors.log"
 
 [color]
-  app = ""
-  build = "yellow"
   main = "magenta"
-  mode = ""
-  runner = "green"
   watcher = "cyan"
+  build = "yellow"
+  runner = "green"
 
 [log]
-  main_only = false
   silent = false
   time = false
+  main_only = false
 
 [misc]
   clean_on_exit = false
 
 [proxy]
-  app_port = 8080
-  app_start_timeout = 0
   enabled = true
   proxy_port = 20000
+  app_port = 8080      # Make sure your Go server listens on port 8080!
+  app_start_timeout = 0
 
 [screen]
   clear_on_rebuild = true
