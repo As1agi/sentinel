@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// todo add command for migrate
 var databaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "database",
@@ -48,7 +49,6 @@ func CleanReadOsvDataIntoDB(db *sql.DB) error {
 		return err
 	}
 
-	//todo use viper for path management and shit and add command for migrate
 	err = dataset.CleanOSV()
 	if err != nil {
 		return err

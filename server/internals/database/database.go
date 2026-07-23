@@ -27,7 +27,7 @@ type VulnPackage struct {
 	//CVV later on and maybe a summary from AI on how to fix?
 }
 
-// ReadCVEIntoDataBase reads in data from a json file which has an array of CleanVulnerability
+// ReadCveJsonIntoDataBase reads in data from a json file which has an array of CleanVulnerability
 // into a database with the correct schema
 func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 	file, err := os.Open(CveJsonPath)
@@ -58,6 +58,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 		log.Fatalf("Failed to prepare transaction statements: %v", err)
 	}
 
+	log.Println("[*] streaming CVEs into the database")
 	for decoder.More() {
 		var cve internals.CleanVulnerability
 		if err := decoder.Decode(&cve); err != nil {
@@ -81,7 +82,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 			if err := tx.Commit(); err != nil {
 				log.Fatalf("Failed to commit batch to disk: %v", err)
 			}
-			log.Printf("Successfully flushed %d records to the database...", count)
+			//log.Printf("Successfully flushed %d records to the database...", count)
 
 			// Re-initialize for the next chunk
 			tx, err = db.Begin()
@@ -89,7 +90,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 				log.Fatalf("Failed to cycle next transaction: %v", err)
 			}
 
-			//Re-prepare statements tied to the brand new transaction frame
+			//Re-prepare statements tied to the brand-new transaction frame
 			cveStmt, upstreamStmt, err = prepareBatchStatementsSBOMInsert(tx)
 			if err != nil {
 				log.Fatalf("Failed to refresh transaction statements: %v", err)
@@ -109,7 +110,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 		log.Fatalf("Failed to read closing bracket: %v", err)
 	}
 
-	fmt.Printf("Engine complete. Successfully indexed all %d CVE components safely!\n", count)
+	fmt.Printf("[+] Successfully indexed all %d CVE components safely!\n", count)
 }
 func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.CleanVulnerability) error {
 	_, err := cveStmt.Exec(cve.AdvisoryID, cve.Ecosystem, cve.PackageName, cve.Purl, cve.Introduced, cve.Fixed)
@@ -127,7 +128,7 @@ func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.Clea
 	return nil
 }
 
-//todo break the function into micro functions for clean shits
+// todo break the function into tiny functions
 
 // InsertSBOM inserts SBOM data into the database
 func InsertSBOM(db *sql.DB, s internals.SBOM) error {
@@ -153,7 +154,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 		return fmt.Errorf("failed to process user/hostname %s: %w", s.Hostname, err)
 	}
 
-	// STEP 2: Register or Update the Machine (SBOM)
+	//  Register or Update the Machine
 	var sbomID int64
 	upsertSBOMQuery := `
 		INSERT INTO sboms (user_id, machine_id, timestamp, os, os_version, os_ecosystem, kernel_version, architecture)
@@ -278,7 +279,6 @@ func GetAvailableMachines(db *sql.DB) (map[string]string, error) {
 		var machineID string
 		var hostname string
 
-		//  CRITICAL: Pass pointers (&) to Scan so values can be written
 		err := rows.Scan(&machineID, &hostname)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan machine row: %w", err)

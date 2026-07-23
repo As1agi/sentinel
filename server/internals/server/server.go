@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"server/internals/config"
 	"server/internals/database"
@@ -11,26 +12,28 @@ import (
 
 func init() {
 	//prepare the templates then use them later
-	fmt.Println("Creating directories...")
+	fmt.Println("[*]Creating directories...")
 	if err := config.InitDirectories(); err != nil {
 		log.Fatalf("error initializing directories : %v\n", err)
 	}
-	fmt.Println("Databasing...")
+	fmt.Println("[*]Initialising database schema")
 	database.InitSchema()
+	//register mime types to remove the error when loading output.css
+	//http://localhost:8080/static/output.css' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
+	_ = mime.AddExtensionType(".css", "text/css; charset=utf-8")
 
 }
 
 func Serve(port string) {
 
 	//todo refactor the server struct so we use the port provided
-	fmt.Println("Server running on http://localhost:8080/")
+	fmt.Println("[+]Server running on http://localhost:8080/")
 
 	dataBasePath, err := config.GetDBPath()
 	if err != nil {
-		log.Fatalf("error getting")
+		log.Fatalf("error fetching database path")
 	}
 	db, err := sql.Open("sqlite3", dataBasePath)
-
 	if err != nil {
 		log.Fatalf("error opening the database %v\n", err)
 	}
@@ -47,6 +50,6 @@ func Serve(port string) {
 
 	fmt.Println("Server running on :8080...")
 	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
-		fmt.Printf("Server failed: %v\n", err)
+		fmt.Printf("[X] Server failed: %v\n", err)
 	}
 }
