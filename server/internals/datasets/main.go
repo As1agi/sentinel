@@ -51,7 +51,7 @@ func CleanOSV() error {
 		log.Printf("error:%+v", err)
 	}
 
-	//todo split into a re-usable function
+	//todo split into a re-usable function , PLEASEE!!
 
 	//walk the directory and clean all the json files then write them directly to disk file
 	err = filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
@@ -131,8 +131,10 @@ func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 				continue
 			}
 
+			//TODO to reduce param overloading just use a struct bruh dont be too lazy 🤨
+
 			// Pass metadata context down so the helper can construct the records directly
-			rangeRecords := parseEvents(r.Events, advisory.ID, advisory.Aliases, advisory.Upstream, ecosystem, pkgName, purl) //, affectedVersions) //SpecificEcosystemBinaries)
+			rangeRecords := parseEvents(r.Events, advisory.ID, advisory.Aliases, advisory.Upstream, ecosystem, pkgName, purl)
 			records = append(records, rangeRecords...)
 		}
 	}
@@ -140,7 +142,6 @@ func cleanVuln(advisory OSVAdvisory) []CleanVulnerability {
 	return records
 }
 
-// transform to a util
 // func to get the real cve ID and remove the prepended UBUNTU-*ETC
 func getOsvCveId(advisoryID string) string {
 	// Split into a maximum of 2 parts: ["UBUNTU", "CVE-2022-0987"]

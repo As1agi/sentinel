@@ -2,20 +2,33 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"server/internals/config"
 )
 
 func OpenDB() *sql.DB {
-	log.Printf("Opening DataBase")
 	dataBasePath, err := config.GetDBPath()
-
 	if err != nil {
 		log.Fatalf("error opening database : %v\n", err)
 	}
-	db, err := sql.Open("sqlite3", dataBasePath)
+
+	// Format DSN with WAL mode, busy timeout (5s), and synchronous=NORMAL
+	dsn := fmt.Sprintf("%s?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL", dataBasePath)
+
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		log.Fatalf("cant open the db at path :%v\n err:%v\n", dataBasePath, err)
+		log.Fatalf("error opening database : %v\n", err)
+	}
+
+	// Restrict to a single connection to serialize writes in Go's connection pool
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
+
+	// Verify connection handle
+	if err := db.Ping(); err != nil {
+		log.Fatalf("error connecting to database : %v\n", err)
 	}
 	// 2. Enable Foreign Keys (SQLite disables them by default for backwards compatibility)
 	return db

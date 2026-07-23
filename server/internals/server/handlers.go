@@ -116,11 +116,12 @@ func (s *server) AuditPackages(hostname string, machineID string) {
 	if err := database.InsertVulnPackages(s.db, packages, hostname, machineID); err != nil {
 		log.Printf("error inserting vulnPackages to the database:%v\n", err)
 	}
-	log.Printf("Successfuly inserted vulnpackages for the user:%v machineID:%v", hostname, machineID)
+	log.Printf("[+]Successfuly inserted vulnpackages for the user:%v machineID:%v", hostname, machineID)
 }
 
 // Static servers static files to the server
 func (s *server) Static(w http.ResponseWriter, r *http.Request) {
-	fs := http.StripPrefix("/static/", http.FileServer(http.Dir("./internals/server/assets/static")))
+	log.Printf("path : %v", r.URL.Path)
+	fs := http.StripPrefix("/static/", http.FileServer(http.Dir("./assets/static/")))
 	fs.ServeHTTP(w, r)
 }

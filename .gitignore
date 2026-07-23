@@ -36,6 +36,7 @@ go.work.sum
 *.jpg
 *.json 
 *.txt
+logs
 
 assets
 node_modules
