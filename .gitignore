@@ -41,3 +41,4 @@ logs
 assets
 node_modules
 tmp
+dist*
