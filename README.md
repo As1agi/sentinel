@@ -26,8 +26,8 @@ Download, extract, and execute `v0.1.0-beta.0` in a single command:
 ```bash
 wget -q https://github.com/As1agi/sentinel/releases/download/v0.1.0beta/sentinel-v0.1.0-beta.0-linux-amd64.tar.gz && \
 tar -xzf sentinel-v0.1.0-beta.0-linux-amd64.tar.gz && \
-cd sentinel-0.1.0beta && \
-chmod +x ./*.sh
+cd sentinel-v0.1.0-beta.0-linux-amd64 && \
+chmod +x ./*.sh && \
 ./sentinel.sh
 ````
 
