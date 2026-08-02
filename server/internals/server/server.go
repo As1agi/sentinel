@@ -12,11 +12,11 @@ import (
 
 func init() {
 	//prepare the templates then use them later
-	fmt.Println("[*]Creating directories...")
+	log.Println("[*]Creating directories...")
 	if err := config.InitDirectories(); err != nil {
 		log.Fatalf("error initializing directories : %v\n", err)
 	}
-	fmt.Println("[*]Initialising database schema")
+	log.Println("[*]Initialising database schema")
 	database.InitSchema()
 	//register mime types to remove the error when loading output.css
 	//http://localhost:8080/static/output.css' because its MIME type ('text/plain') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
@@ -27,7 +27,7 @@ func init() {
 func Serve(port string) {
 
 	//todo refactor the server struct so we use the port provided
-	fmt.Println("[+]Server running on http://localhost:8080/")
+	log.Println("[+]Server running on http://localhost:8080/")
 
 	dataBasePath, err := config.GetDBPath()
 	if err != nil {
@@ -50,6 +50,6 @@ func Serve(port string) {
 
 	fmt.Println("Server running on :8080...")
 	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
-		fmt.Printf("[X] Server failed: %v\n", err)
+		log.Printf("[X] Server failed: %v\n", err)
 	}
 }

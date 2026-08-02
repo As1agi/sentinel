@@ -41,7 +41,7 @@ type Src struct {
 }
 
 // CleanVulnerability is the final structure for the CVE data which is stored in the database
-type CleanVulnerability struct {
+type NormalizedVuln struct {
 	AdvisoryID  string   `json:"advisory_id"`
 	Upstream    []string `json:"upstream,omitempty"`
 	Ecosystem   string   `json:"ecosystem"`

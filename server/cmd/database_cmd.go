@@ -49,7 +49,7 @@ func CleanReadOsvDataIntoDB(db *sql.DB) error {
 		return err
 	}
 
-	err = dataset.CleanOSV()
+	err = dataset.OsvNormalize()
 	if err != nil {
 		return err
 	}
