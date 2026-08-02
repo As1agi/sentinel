@@ -60,7 +60,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 
 	log.Println("[*] streaming CVEs into the database")
 	for decoder.More() {
-		var cve internals.CleanVulnerability
+		var cve internals.NormalizedVuln
 		if err := decoder.Decode(&cve); err != nil {
 			log.Fatalf("Failed to decode CVE object: %v", err)
 		}
@@ -112,7 +112,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 
 	fmt.Printf("[+] Successfully indexed all %d CVE components safely!\n", count)
 }
-func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.CleanVulnerability) error {
+func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
 	_, err := cveStmt.Exec(cve.AdvisoryID, cve.Ecosystem, cve.PackageName, cve.Purl, cve.Introduced, cve.Fixed)
 	if err != nil {
 		return fmt.Errorf("cve records execution failure: %w", err)

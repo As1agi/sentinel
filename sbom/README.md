@@ -1,1 +1,1 @@
-Official Casandra OS binary source code and documentation
+SBOM collector

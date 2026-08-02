@@ -27,8 +27,6 @@ type OSVEvent struct {
 	Fixed      string `json:"fixed,omitempty"`
 }
 
-// memory-efficient, flattened output structure
-
 type EcosystemSpecificBinaries struct {
 	Binaries []Binary `json:"binaries"`
 }
