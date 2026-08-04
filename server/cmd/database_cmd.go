@@ -16,12 +16,20 @@ var databaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "database",
 	RunE: func(cmd *cobra.Command, args []string) error {
-
+		var err error
 		if populate {
 			db := database.OpenDB()
-			defer db.Close()
+			defer func() {
+				if dbCloseErr := db.Close(); dbCloseErr != nil {
+					if err == nil {
+						err = fmt.Errorf("error closing database :%v/t", dbCloseErr)
+					} else {
+						log.Printf("error closing database")
+					}
+				}
+			}()
 
-			if err := CleanReadAllCveIntoDataBase(db); err != nil {
+			if err = CleanReadAllCveIntoDataBase(db); err != nil {
 				log.Fatal(err)
 			}
 			return nil

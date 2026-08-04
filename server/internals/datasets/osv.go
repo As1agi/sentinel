@@ -38,7 +38,7 @@ func OsvNormalize() error {
 	if err != nil {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	if _, err = outFile.WriteString("[\n"); err != nil {
 		return fmt.Errorf("failed writing opening bracket: %w", err)
@@ -92,7 +92,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error walking directory %+v\n", err)
+		return fmt.Errorf("error walking directory %+v", err)
 	}
 	return nil
 }
