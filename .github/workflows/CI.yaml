@@ -53,17 +53,17 @@ jobs:
 
       - name: Lint (Server)
         if: ${{ needs.check-changes.outputs.server == 'true' }}
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./server
-          version: v1.56.2
+          version: v1.61.1
 
       - name: Lint (SBOM)
         if: ${{ needs.check-changes.outputs.sbom == 'true' }}
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./sbom
-          version: v1.56.2
+          version: v1.61.1
 
   test-server:
     needs: [check-changes, lint-and-format]
