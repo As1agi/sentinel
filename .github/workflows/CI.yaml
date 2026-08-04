@@ -56,14 +56,14 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./server
-          version: v1.61.1
+          version: v1.61.0
 
       - name: Lint (SBOM)
         if: ${{ needs.check-changes.outputs.sbom == 'true' }}
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./sbom
-          version: v1.61.1
+          version: v1.61.0
 
   test-server:
     needs: [check-changes, lint-and-format]
@@ -101,7 +101,7 @@ jobs:
           SERVER_PID=$!
           sleep 5
           if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Server successfully booted and bound to port without panicking.
+            echo "Server successfully booted and bound to port without panicking"
             kill $SERVER_PID
           else
             echo "Server crashed immediately upon execution."
