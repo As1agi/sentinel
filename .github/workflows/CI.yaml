@@ -7,23 +7,29 @@ on:
     branches: [main, master]
 
 jobs: 
-  check-changes:
+  audit-changes:
     runs-on: ubuntu-latest
-    outputs:
-      server: ${{ steps.filter.outputs.server }}
-      sbom: ${{ steps.filter.outputs.sbom }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
-            server: ['server/**']
-            sbom: ['sbom/**']
+            critical:
+              - 'LICENSE'
+              - '.github/workflows/**'
+              
+      - name: Alert on Critical File Changes
+        if: ${{ steps.filter.outputs.critical == 'true' }}
+        run: |
+          # Creates a yellow warning banner in the GitHub UI
+          echo "::warning title=Critical Files Modified::The LICENSE or CI workflow files were modified in this run. Review carefully."
+          
+          # Writes a markdown alert to the GitHub Actions run summary page
+          echo "### ⚠️ Critical Files Modified" >> $GITHUB_STEP_SUMMARY
+          echo "Changes were detected in either the \`LICENSE\` or the CI workflows (\`.github/workflows/\`). Please ensure these changes are intentional." >> $GITHUB_STEP_SUMMARY
 
   lint-and-format:
-    needs: check-changes
-    if: ${{ needs.check-changes.outputs.server == 'true' || needs.check-changes.outputs.sbom == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +40,6 @@ jobs:
           cache: true
 
       - name: Check Formatting (Server)
-        if: ${{ needs.check-changes.outputs.server == 'true' }}
         working-directory: ./server
         run: |
           if [ -n "$(go fmt ./...)" ]; then
@@ -43,7 +48,6 @@ jobs:
           fi
 
       - name: Check Formatting (SBOM)
-        if: ${{ needs.check-changes.outputs.sbom == 'true' }}
         working-directory: ./sbom
         run: |
           if [ -n "$(go fmt ./...)" ]; then
@@ -52,22 +56,19 @@ jobs:
           fi
 
       - name: Lint (Server)
-        if: ${{ needs.check-changes.outputs.server == 'true' }}
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./server
           version: v1.61.0
 
       - name: Lint (SBOM)
-        if: ${{ needs.check-changes.outputs.sbom == 'true' }}
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./sbom
           version: v1.61.0
 
   test-server:
-    needs: [check-changes, lint-and-format]
-    if: ${{ needs.check-changes.outputs.server == 'true' }}
+    needs: lint-and-format
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -101,16 +102,15 @@ jobs:
           SERVER_PID=$!
           sleep 5
           if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Server successfully booted and bound to port without panicking"
+            echo "Server successfully booted and bound to port without panicking."
             kill $SERVER_PID
           else
             echo "Server crashed immediately upon execution."
             exit 1
           fi
-
+          
   test-sbom:
-    needs: [check-changes, lint-and-format]
-    if: ${{ needs.check-changes.outputs.sbom == 'true' }}
+    needs: lint-and-format
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
