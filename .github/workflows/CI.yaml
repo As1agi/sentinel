@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+ 
+ permissions:
+  contents: read
 
 jobs: 
   audit-changes:
@@ -22,10 +25,8 @@ jobs:
       - name: Alert on Critical File Changes
         if: ${{ steps.filter.outputs.critical == 'true' }}
         run: |
-          # Creates a yellow warning banner in the GitHub UI
           echo "::warning title=Critical Files Modified::The LICENSE or CI workflow files were modified in this run. Review carefully."
           
-          # Writes a markdown alert to the GitHub Actions run summary page
           echo "### ⚠️ Critical Files Modified" >> $GITHUB_STEP_SUMMARY
           echo "Changes were detected in either the \`LICENSE\` or the CI workflows (\`.github/workflows/\`). Please ensure these changes are intentional." >> $GITHUB_STEP_SUMMARY
 
@@ -41,17 +42,23 @@ jobs:
 
       - name: Check Formatting (Server)
         working-directory: ./server
-        run: |
-          if [ -n "$(go fmt ./...)" ]; then
-            echo "Go code in /server is not formatted properly. Run 'go fmt ./...'"
+        run: | 
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files in /server are not formatted properly:"
+            echo "$UNFORMATTED"
+            echo "Run 'go fmt ./...' locally before pushing."
             exit 1
           fi
 
       - name: Check Formatting (SBOM)
         working-directory: ./sbom
         run: |
-          if [ -n "$(go fmt ./...)" ]; then
-            echo "Go code in /sbom is not formatted properly. Run 'go fmt ./...'"
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files in /sbom are not formatted properly:"
+            echo "$UNFORMATTED"
+            echo "Run 'go fmt ./...' locally before pushing."
             exit 1
           fi
 
@@ -59,13 +66,13 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./server
-          version: v1.61.0
+          version: latest
 
       - name: Lint (SBOM)
         uses: golangci/golangci-lint-action@v6
         with:
           working-directory: ./sbom
-          version: v1.61.0
+          version: latest
 
   test-server:
     needs: lint-and-format
@@ -73,19 +80,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os_image: ["ubuntu:22.04", "debian:bookworm"]
+        container_image: ["golang:1.22-jammy", "golang:1.22-bookworm"]
     container:
-      image: ${{ matrix.os_image }}
+      image: ${{ matrix.container_image }}
     steps:
-      - name: Install System Dependencies
-        run: apt-get update && apt-get install -y git curl build-essential
-        
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
 
       - name: Run Server Tests with Race Detector
         working-directory: ./server
@@ -93,21 +92,25 @@ jobs:
 
       - name: Build Server
         working-directory: ./server
-        run: go build -v -o server_bin ./...
+              run: go build -v -o server_bin .
 
       - name: Dry Run Server
         working-directory: ./server 
         run: |
           ./server_bin &
           SERVER_PID=$!
-          sleep 5
-          if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Server successfully booted and bound to port without panicking."
-            kill $SERVER_PID
-          else
-            echo "Server crashed immediately upon execution."
-            exit 1
-          fi
+          
+          # Poll the process every second rather than a blind sleep
+          for i in {1..5}; do
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "Server crashed during startup."
+              exit 1
+            fi
+            sleep 1
+          done
+          
+          echo "Server successfully booted and stayed alive."
+          kill $SERVER_PID
           
   test-sbom:
     needs: lint-and-format
@@ -115,19 +118,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os_image: ["ubuntu:22.04", "debian:bookworm"]
+        container_image: ["golang:1.22-jammy", "golang:1.22-bookworm"]
     container:
-      image: ${{ matrix.os_image }}
+      image: ${{ matrix.container_image }}
     steps:
-      - name: Install System Dependencies
-        run: apt-get update && apt-get install -y git curl build-essential
-        
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
 
       - name: Run SBOM Tests
         working-directory: ./sbom
@@ -135,7 +130,7 @@ jobs:
 
       - name: Build SBOM
         working-directory: ./sbom
-        run: go build -v -o sbom_bin ./...
+        run: go build -v -o sbom_bin .
 
       - name: Execute SBOM Generator
         working-directory: ./sbom
