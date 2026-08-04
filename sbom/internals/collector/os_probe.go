@@ -2,11 +2,11 @@ package sbom
 
 import (
 	"bufio"
-	utils "cassandra/internals"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	utils "sentinel/internals"
 	"strings"
 	"time"
 )
@@ -133,12 +133,17 @@ func getDistroMetadata() (DistroMetadata, string, error) {
 	if err != nil {
 		return meta, "", fmt.Errorf("cannot read /etc/os-release: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	var prettyName string
 	var idLike string
 
 	scanner := bufio.NewScanner(file)
+	if err = scanner.Err(); err != nil {
+		return DistroMetadata{}, "", fmt.Errorf("scanner error:%v", err)
+	}
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.Contains(line, "=") {

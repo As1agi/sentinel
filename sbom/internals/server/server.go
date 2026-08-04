@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,6 +18,9 @@ var Config = AppConfig{
 
 func PostSBOM(SBOMbytes []byte) error {
 	req, err := newPostRequest("/api/v1/sbom", SBOMbytes, true)
+	if err != nil {
+		log.Printf("error sending SBOM to server : %v", err)
+	}
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -27,6 +31,10 @@ func PostSBOM(SBOMbytes []byte) error {
 	}
 
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading server response : %v", err)
+	}
+
 	//todo check response status for failures or other status
 
 	fmt.Printf("Response Status: %s\n", resp.Status)
