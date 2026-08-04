@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	fileProcessWorkers = 5
+	fileProcessWorkersCount = 5
 )
 
 // CleanOSV transforms the raw OSV.dev CVE data and saves it to the cveSavePath
@@ -50,7 +50,7 @@ func OsvNormalize() error {
 
 	var wg sync.WaitGroup
 
-	go startProcessFileWorkers(fileProcessWorkers, &wg, pathsChan, normalizedVulnChan)
+	go startProcessFileWorkers(fileProcessWorkersCount, &wg, pathsChan, normalizedVulnChan)
 
 	// start worker for writing files to the disk
 	fileCountChan := make(chan int)
@@ -113,7 +113,6 @@ func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVul
 // ... pathsChan is a channel with the paths to the raw json data will be read from
 // ...normalizedVulnChan is the channel which the normalized vulns will be streamed to
 func startProcessFileWorkers(workersCount int, wg *sync.WaitGroup, pathsChan chan string, normalizedVulnChan chan []normalizedVuln) {
-	// Start file prcess Workers
 	for i := 0; i < workersCount; i++ {
 		wg.Add(1)
 		go func() {

@@ -1,0 +1,142 @@
+name: sentinel-ci
+
+on: 
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs: 
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      sbom: ${{ steps.filter.outputs.sbom }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server: ['server/**']
+            sbom: ['sbom/**']
+
+  lint-and-format:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.server == 'true' || needs.check-changes.outputs.sbom == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22' 
+          cache: true
+
+      - name: Check Formatting (Server)
+        if: ${{ needs.check-changes.outputs.server == 'true' }}
+        working-directory: ./server
+        run: |
+          if [ -n "$(go fmt ./...)" ]; then
+            echo "Go code in /server is not formatted properly. Run 'go fmt ./...'"
+            exit 1
+          fi
+
+      - name: Check Formatting (SBOM)
+        if: ${{ needs.check-changes.outputs.sbom == 'true' }}
+        working-directory: ./sbom
+        run: |
+          if [ -n "$(go fmt ./...)" ]; then
+            echo "Go code in /sbom is not formatted properly. Run 'go fmt ./...'"
+            exit 1
+          fi
+
+      - name: Lint (Server)
+        if: ${{ needs.check-changes.outputs.server == 'true' }}
+        uses: golangci/golangci-lint-action@v4
+        with:
+          working-directory: ./server
+          version: v1.56.2
+
+      - name: Lint (SBOM)
+        if: ${{ needs.check-changes.outputs.sbom == 'true' }}
+        uses: golangci/golangci-lint-action@v4
+        with:
+          working-directory: ./sbom
+          version: v1.56.2
+
+  test-server:
+    needs: [check-changes, lint-and-format]
+    if: ${{ needs.check-changes.outputs.server == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os_image: ["ubuntu:22.04", "debian:bookworm"]
+    container:
+      image: ${{ matrix.os_image }}
+    steps:
+      - name: Install System Dependencies
+        run: apt-get update && apt-get install -y git curl build-essential
+        
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run Server Tests with Race Detector
+        working-directory: ./server
+        run: go test -v -race -cover ./...
+
+      - name: Build Server
+        working-directory: ./server
+        run: go build -v -o server_bin ./...
+
+      - name: Dry Run Server
+        working-directory: ./server 
+        run: |
+          ./server_bin &
+          SERVER_PID=$!
+          sleep 5
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server successfully booted and bound to port without panicking.
+            kill $SERVER_PID
+          else
+            echo "Server crashed immediately upon execution."
+            exit 1
+          fi
+
+  test-sbom:
+    needs: [check-changes, lint-and-format]
+    if: ${{ needs.check-changes.outputs.sbom == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os_image: ["ubuntu:22.04", "debian:bookworm"]
+    container:
+      image: ${{ matrix.os_image }}
+    steps:
+      - name: Install System Dependencies
+        run: apt-get update && apt-get install -y git curl build-essential
+        
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run SBOM Tests
+        working-directory: ./sbom
+        run: go test -v -race -cover ./...
+
+      - name: Build SBOM
+        working-directory: ./sbom
+        run: go build -v -o sbom_bin ./...
+
+      - name: Execute SBOM Generator
+        working-directory: ./sbom
+        run: ./sbom_bin
