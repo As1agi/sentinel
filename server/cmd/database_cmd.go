@@ -62,7 +62,10 @@ func CleanReadOsvDataIntoDB(db *sql.DB) error {
 		return err
 	}
 
-	database.ReadCveJsonIntoDataBase(db, cleanOsvJsonPath)
+	err = database.ReadCveJsonIntoDataBase(db, cleanOsvJsonPath)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

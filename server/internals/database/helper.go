@@ -30,29 +30,43 @@ func OpenDB() *sql.DB {
 	if err := db.Ping(); err != nil {
 		log.Fatalf("error connecting to database : %v\n", err)
 	}
-	// 2. Enable Foreign Keys (SQLite disables them by default for backwards compatibility)
+
+	//  Enable Foreign Keys (SQLite disables them by default for backwards compatibility)
 	return db
 }
 
-func prepareBatchStatementsSBOMInsert(tx *sql.Tx) (*sql.Stmt, *sql.Stmt, error) {
-	cveQuery := `
-    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed) 
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
-
-	upstreamQuery := `
-    INSERT INTO upstream (advisory_id, upstream_id) 
-    VALUES (?, ?) ON CONFLICT DO NOTHING;`
-
-	cveStmt, err := tx.Prepare(cveQuery)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	upstreamStmt, err := tx.Prepare(upstreamQuery)
-	if err != nil {
-		_ = cveStmt.Close()
-		return nil, nil, err
-	}
-
-	return cveStmt, upstreamStmt, nil
+type Prepare interface {
+	Prepare(query string) (*sql.Stmt, error)
 }
+
+type QueryDef struct {
+	Executor Prepare
+	Query    string
+}
+
+// prepareBatchStatements returns an array of statements in the order they are passed
+// // also return a function to close all statements
+// func prepareBatchStatements(defs ...QueryDef) ([]*sql.Stmt, func(), error) {
+// 	stmts := make([]*sql.Stmt, 0, len(defs))
+
+// 	cleanup := func() {
+// 		for _, stmt := range stmts {
+// 			if stmt != nil {
+// 				_ = stmt.Close()
+// 			}
+// 		}
+// 	}
+
+// 	for i, def := range defs {
+// 		stmt, err := def.Executor.Prepare(def.Query)
+// 		if err != nil {
+// 			// CRITICAL: If preparation fails halfway, we must execute the cleanup
+// 			// before returning, otherwise we leak the previously prepared statements.
+// 			cleanup()
+// 			return nil, nil, fmt.Errorf("failed preparing query at index %d: %w", i, err)
+// 		}
+// 		stmts = append(stmts, stmt)
+// 	}
+
+// 	return stmts, cleanup, nil
+// }

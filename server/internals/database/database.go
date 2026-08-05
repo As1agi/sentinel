@@ -16,105 +16,119 @@ const (
 	BatchSize = 5000
 )
 
-// VulnPackage for now lets redeclare the VulnPackage
-type VulnPackage struct {
-	PackageName string `json:"package_name"`
-	Installed   string `json:"installed"`
-	Introduced  string `json:"introduced"`
-	Fixed       string `json:"fixed"`
-	Purl        string `json:"purl"`
-	CveId       string `json:"CveId"`
-	//CVV later on and maybe a summary from AI on how to fix?
-}
-
 // ReadCveJsonIntoDataBase reads in data from a json file which has an array of CleanVulnerability
 // into a database with the correct schema
-func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
-	file, err := os.Open(CveJsonPath)
+
+const (
+	cveInsertQuery = `
+    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed)
+    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
+
+	upstreamInsertQuery = `
+    INSERT INTO upstream (advisory_id, upstream_id)
+    VALUES (?, ?) ON CONFLICT DO NOTHING;`
+)
+
+// ReadCveJsonIntoDataBase manages file resources, compiles statement plans on the DB handle,
+// and delegates ingestion streaming into thB
+func ReadCveJsonIntoDataBase(db *sql.DB, cveJsonPath string) error {
+	file, err := os.Open(cveJsonPath)
 	if err != nil {
-		log.Fatalf("Failed to open file: %v", err)
+		return fmt.Errorf("failed to open CVE dataset %s: %w", cveJsonPath, err)
 	}
 	defer func() {
 		_ = file.Close()
 	}()
 
-	decoder := json.NewDecoder(file)
-	_, err = decoder.Token() // Consume opening '['
+	cveDbStmt, err := db.Prepare(cveInsertQuery)
 	if err != nil {
-		log.Fatalf("Failed to read opening bracket: %v", err)
+		return fmt.Errorf("failed to prepare cve query: %w", err)
 	}
+	defer func() { _ = cveDbStmt.Close() }()
+
+	upstreamDbStmt, err := db.Prepare(upstreamInsertQuery)
+	if err != nil {
+		return fmt.Errorf("failed to prepare upstream query: %w", err)
+	}
+	defer func() { _ = upstreamDbStmt.Close() }()
+
+	log.Println("[*] Streaming CVEs into the database...")
+
+	count, err := streamAndCommitCves(db, file, cveDbStmt, upstreamDbStmt)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[+] Successfully indexed all %d CVE components safely!\n", count)
+	return nil
+}
+
+// streamAndCommitCves streams JSON objects and rotates transaction chunks.
+func streamAndCommitCves(
+	db *sql.DB,
+	file *os.File,
+	cveDbStmt *sql.Stmt,
+	upstreamDbStmt *sql.Stmt,
+) (int, error) {
+	decoder := json.NewDecoder(file)
+	if _, err := decoder.Token(); err != nil { // Consume opening '['
+		return 0, fmt.Errorf("failed to read opening bracket: %w", err)
+	}
+
+	// Start initial transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin initial transaction: %w", err)
+	}
+
+	// Bind global statements to current transaction
+	cveTxStmt := tx.Stmt(cveDbStmt)
+	upstreamTxStmt := tx.Stmt(upstreamDbStmt)
 
 	count := 0
 
-	// Initialize the very first transaction chunk
-	tx, err := db.Begin()
-	if err != nil {
-		log.Fatalf("Failed to start initial transaction: %v", err)
-	}
-	// Deferred rollback protects against partial corruptions if the stream panics mid-execution
-	defer func() { _ = tx.Rollback() }()
-
-	// Prepare statements *once* on the active transaction lifecycle
-	cveStmt, upstreamStmt, err := prepareBatchStatementsSBOMInsert(tx)
-	if err != nil {
-		log.Fatalf("Failed to prepare transaction statements: %v", err)
-	}
-
-	log.Println("[*] streaming CVEs into the database")
 	for decoder.More() {
 		var cve internals.NormalizedVuln
 		if err := decoder.Decode(&cve); err != nil {
-			log.Fatalf("Failed to decode CVE object: %v", err)
+			_ = tx.Rollback()
+			return count, fmt.Errorf("failed to decode CVE object at index %d: %w", count, err)
 		}
 
-		// Write to memory buffers via the prepared statements
-		if err := executeInsert(cveStmt, upstreamStmt, cve); err != nil {
-			log.Fatalf("Write execution error: %v", err)
+		if err := InsertCveAndUpstream(cveTxStmt, upstreamTxStmt, cve); err != nil {
+			_ = tx.Rollback()
+			return count, fmt.Errorf("write execution error at index %d: %w", count, err)
 		}
 
 		count++
 
-		// Batch size reached: Flush chunk to disk and rotate the transaction context
 		if count%BatchSize == 0 {
-			// Prepared statements must be closed before committing their parent transaction
-			_ = cveStmt.Close()
-			_ = upstreamStmt.Close()
-
-			// commit everything in this chunk atomically to disk
 			if err := tx.Commit(); err != nil {
-				log.Fatalf("Failed to commit batch to disk: %v", err)
+				return count, fmt.Errorf("failed to commit batch at index %d: %w", count, err)
 			}
-			//log.Printf("Successfully flushed %d records to the database...", count)
 
-			// Re-initialize for the next chunk
 			tx, err = db.Begin()
 			if err != nil {
-				log.Fatalf("Failed to cycle next transaction: %v", err)
+				return count, fmt.Errorf("failed to cycle transaction at index %d: %w", count, err)
 			}
 
-			//Re-prepare statements tied to the brand-new transaction frame
-			cveStmt, upstreamStmt, err = prepareBatchStatementsSBOMInsert(tx)
-			if err != nil {
-				log.Fatalf("Failed to refresh transaction statements: %v", err)
-			}
+			cveTxStmt = tx.Stmt(cveDbStmt)
+			upstreamTxStmt = tx.Stmt(upstreamDbStmt)
 		}
 	}
 
-	// Clean up the final lingering partial batch
-	_ = cveStmt.Close()
-	_ = upstreamStmt.Close()
+	// Flush remaining records
 	if err := tx.Commit(); err != nil {
-		log.Fatalf("Failed to process final database flush: %v", err)
+		return count, fmt.Errorf("failed to commit final batch: %w", err)
 	}
 
-	_, err = decoder.Token() // Consume closing ']'
-	if err != nil {
-		log.Fatalf("Failed to read closing bracket: %v", err)
+	if _, err := decoder.Token(); err != nil { // Consume closing ']'
+		return count, fmt.Errorf("failed to read closing bracket: %w", err)
 	}
 
-	fmt.Printf("[+] Successfully indexed all %d CVE components safely!\n", count)
+	return count, nil
 }
-func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
+
+func InsertCveAndUpstream(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
 	_, err := cveStmt.Exec(cve.AdvisoryID, cve.Ecosystem, cve.PackageName, cve.Purl, cve.Introduced, cve.Fixed)
 	if err != nil {
 		return fmt.Errorf("cve records execution failure: %w", err)
@@ -129,8 +143,6 @@ func executeInsert(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.Norm
 
 	return nil
 }
-
-// todo break the function into tiny functions
 
 // InsertSBOM inserts SBOM data into the database
 func InsertSBOM(db *sql.DB, s internals.SBOM) error {
@@ -177,14 +189,13 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 	}
 
 	//Wipe Old State
-
 	_, err = tx.Exec(`DELETE FROM packages WHERE sbom_id = ?`, sbomID)
 	if err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("failed to clear old packages: %w", err)
 	}
 
-	//   Insert the New Packages Array
+	//Insert the New Packages Array
 	insertPackageQuery := `
 		INSERT INTO packages (sbom_id,name, version, purl, source_name, source_version)
 		VALUES (?,?,?,?,?,?);`
@@ -258,9 +269,6 @@ func InsertVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostName s
 	}
 
 	log.Printf("Done Inserting Vulnpackages for hostname:%v\n", hostName)
-	return nil
-}
-func FetchVulnPackages(db *sql.DB, hostName string, machineID string, offset int) []VulnPackage {
 	return nil
 }
 
