@@ -34,7 +34,9 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	decoder := json.NewDecoder(file)
 	_, err = decoder.Token() // Consume opening '['
@@ -75,8 +77,8 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 		// Batch size reached: Flush chunk to disk and rotate the transaction context
 		if count%BatchSize == 0 {
 			// Prepared statements must be closed before committing their parent transaction
-			cveStmt.Close()
-			upstreamStmt.Close()
+			_ = cveStmt.Close()
+			_ = upstreamStmt.Close()
 
 			// commit everything in this chunk atomically to disk
 			if err := tx.Commit(); err != nil {
@@ -99,8 +101,8 @@ func ReadCveJsonIntoDataBase(db *sql.DB, CveJsonPath string) {
 	}
 
 	// Clean up the final lingering partial batch
-	cveStmt.Close()
-	upstreamStmt.Close()
+	_ = cveStmt.Close()
+	_ = upstreamStmt.Close()
 	if err := tx.Commit(); err != nil {
 		log.Fatalf("Failed to process final database flush: %v", err)
 	}
@@ -150,7 +152,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 
 	err = tx.QueryRow(upsertUserQuery, s.Hostname).Scan(&userID)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to process user/hostname %s: %w", s.Hostname, err)
 	}
 
@@ -170,7 +172,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 	).Scan(&sbomID)
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to process machine %s: %w", s.MachineID, err)
 	}
 
@@ -178,7 +180,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 
 	_, err = tx.Exec(`DELETE FROM packages WHERE sbom_id = ?`, sbomID)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to clear old packages: %w", err)
 	}
 
@@ -189,10 +191,12 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 
 	stmt, err := tx.Prepare(insertPackageQuery)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to prepare package statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for _, pkg := range s.Packages {
 		_, err := stmt.Exec(
@@ -204,7 +208,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 			pkg.Source.SourceVersion,
 		)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to insert package %s: %w", pkg.Name, err)
 		}
 	}
@@ -226,27 +230,33 @@ func InsertVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostName s
 `
 	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("error starting transaction:%v\n", err)
+		return fmt.Errorf("error starting transaction:%v", err)
 	}
 	//prepare insert statement
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("error preparing InsertVulnPackages Statement %v\n", err)
+		return fmt.Errorf("error preparing InsertVulnPackages Statement %v", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
+
 	//todo use batching
 
 	//insert all the vuln packages into the DB
 	//p = package
 	for _, p := range vulnPackages {
 		if _, err = stmt.Exec(machineID, hostName, p.PackageName, p.Installed, p.Introduced, p.Fixed, p.Purl, p.CveId); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("\n error inserting vulnPackage %+v , %v", p, err)
 		}
 	}
 
 	//insert the vulnPackages
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error commiting changes to the database %w", err)
+	}
+
 	log.Printf("Done Inserting Vulnpackages for hostname:%v\n", hostName)
 	return nil
 }
@@ -269,7 +279,7 @@ func GetAvailableMachines(db *sql.DB) (map[string]string, error) {
 		return nil, fmt.Errorf("failed to execute machines query: %w", err)
 	}
 	//  Defer closing rows to release the connection back to the pool safely
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Initialize the map to prevent returning a nil map
 	machineMap := make(map[string]string)
@@ -309,7 +319,7 @@ func GetPaginatedVulnPackages(db *sql.DB, machineID string, limit int, offset in
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var packages []internals.VulnPackage
 	for rows.Next() {

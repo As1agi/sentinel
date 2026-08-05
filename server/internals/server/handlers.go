@@ -62,6 +62,9 @@ func (s *server) RenderVulnPackages(w http.ResponseWriter, r *http.Request) {
 func (s *server) Home(w http.ResponseWriter, r *http.Request) {
 	//we fecth the list of all the available SBOMs , return a map of machineID and hostname
 	machines, err := database.GetAvailableMachines(s.db)
+	if err != nil {
+		http.Error(w, "", http.StatusInternalServerError)
+	}
 	//we render the list to the UI
 	err = pages.RenderSBOM(machines).Render(r.Context(), w)
 
@@ -87,7 +90,10 @@ func (s *server) HandleSBOMData(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.Unmarshal(bodyBytes, &data); err != nil {
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte(`{"status": "error"}`))
+		_, err := w.Write([]byte(`{"status": "error"}`))
+		if err != nil {
+			log.Printf("error writing response %v", err)
+		}
 		return
 	}
 
@@ -99,8 +105,10 @@ func (s *server) HandleSBOMData(w http.ResponseWriter, r *http.Request) {
 
 	go s.AuditPackages(data.Hostname, data.MachineID)
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"status": "accepted"}`))
-
+	_, err = w.Write([]byte(`{"status": "accepted"}`))
+	if err != nil {
+		log.Printf("error writing response to user : %v", err)
+	}
 }
 
 func (s *server) AuditPackages(hostname string, machineID string) {

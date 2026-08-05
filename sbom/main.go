@@ -1,13 +1,13 @@
 package main
 
 import (
-	"cassandra/internals/sbom"
-	"cassandra/internals/server"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	sbom "sentinel/internals/collector"
+	"sentinel/internals/server"
 	"time"
 )
 

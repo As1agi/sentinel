@@ -59,16 +59,18 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 	//prepare the statement for querying the cve table for matching CVE packages
 	getMatchingCVEStmt, err := db.Prepare(queryGetMatchingCVEs)
 	if err != nil {
-		return nil, fmt.Errorf("error preparing statement for fetching matching CVEs , %v\n", err)
+		return nil, fmt.Errorf("error preparing statement for fetching matching CVEs , %v", err)
 	}
-	defer getMatchingCVEStmt.Close()
+	defer func() {
+		_ = getMatchingCVEStmt.Close()
+	}()
 
 	var userID int64
 	//fist get the userId
 	row := db.QueryRow(queryGetUserId, hostName)
 	err = row.Scan(&userID)
 	if err != nil {
-		return []VulnPackage{}, fmt.Errorf("error fetching user ID from database %v\n", err)
+		return []VulnPackage{}, fmt.Errorf("error fetching user ID from database %v", err)
 	}
 
 	//then we get the SBOM id for the machine
@@ -77,7 +79,7 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 	row = db.QueryRow(queryGetSbomId, userID, machineID)
 	err = row.Scan(&sbomID, &ecosystem)
 	if err != nil {
-		return []VulnPackage{}, fmt.Errorf("error fetching user sbomID from database %v\n", err)
+		return []VulnPackage{}, fmt.Errorf("error fetching user sbomID from database %v", err)
 	}
 
 	//then we use the SBOM ID to get the packages for the SBOM from the database, marshal them into structs
@@ -92,9 +94,11 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 		//todo prepare statements for query for optimization
 		rows, err := db.Query(queryGetOsPackages, sbomID, lastID)
 		if err != nil {
-			return []VulnPackage{}, fmt.Errorf("error fetching user os packages from database %v\n", err)
+			return []VulnPackage{}, fmt.Errorf("error fetching user os packages from database %v", err)
 		}
-
+		if err = rows.Err(); err != nil {
+			return []VulnPackage{}, err
+		}
 		//loop throught the batch we have and scan for vulns
 		for rows.Next() {
 			var id int
@@ -107,7 +111,7 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 				&pkg.Source.SourceName,
 				&pkg.Source.SourceVersion,
 			); err != nil {
-				return nil, fmt.Errorf("error scanning rows for SBOM for User: %v\n machineID: %v\n  last ID: %v\n", hostName, machineID, lastID)
+				return nil, fmt.Errorf("error scanning rows for SBOM for User: %v machineID: %v  last ID: %v", hostName, machineID, lastID)
 			}
 
 			lastID = id
@@ -125,7 +129,9 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 		}
 
 		checked += count
-		rows.Close()
+		if err := rows.Close(); err != nil {
+			return []VulnPackage{}, err
+		}
 		if count == 0 {
 			break
 		}
@@ -135,26 +141,25 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 	return vulnPackages, nil
 }
 
-// IsVulnerablePackage checks is a package is vulnerable an array of the vulns for that package
+// IsVulnerablePackage checks if a package is vulnerable
 func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string, osPackage internals.OSPackage) (VulnPackage, error) {
-
-	//SELECT advisory_id,package_name,introduced,fixed,purl FROM cve WHERE ecosystem = ? AND (
-	//	package_name = ?
-	//OR package_name = ?
-	//query the database for the data
 
 	rows, err := stmt.Query(ecosystem, osPackage.Name, osPackage.Source.SourceName)
 	if err != nil {
-		return VulnPackage{}, fmt.Errorf("error querying database rows for package , %v\n", err)
+		return VulnPackage{}, fmt.Errorf("error querying database rows for package , %v", err)
 	}
-
-	defer rows.Close()
+	if err = rows.Err(); err != nil {
+		return VulnPackage{}, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
 	//loop through rows and check them for vulns
 	//for now we assume only one will match so we return only one result
 
 	var introduced, purl, packageName, cveID string
 	var isFixed sql.NullString
-	for rows.Next() { // Protects against unpatched/NULL database fields
+	for rows.Next() {
 		if err := rows.Scan(
 			&cveID,
 			&packageName,
@@ -211,14 +216,26 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 		}
 
 		//error logging for when we cant match
-		if packageName == osPackage.Name {
-			return VulnPackage{}, nil //fmt.Errorf("package version not available , unable to match the data\n "+
+
+		switch packageName {
+		case osPackage.Name:
+			return VulnPackage{}, nil
+			//fmt.Errorf("package version not available , unable to match the data\n "+
 			//",CVE package name:%v\n,OS package name:%v\nIntroduced:%v\nFixed:%v\n", osPackage.Name, packageName, introduced, fixed)
-		} else if packageName == osPackage.Source.SourceName {
+
+		case osPackage.Source.SourceName:
 			//no version available for the source hence we cant do any comparison
-			return VulnPackage{}, nil //fmt.Errorf("package version not available , unable to match the data\n "+
-			//",CVE package name:%v\n,OS package name:%v\nIntroduced:%v\nFixed:%v\n", packageName, osPackage.Source.SourceName, introduced, fixed)
+			return VulnPackage{}, nil
+			//fmt.Errorf("package version not available , unable to match the data\n "+
+			//"CVE package name:%v\n,OS package name:%v\nIntroduced:%v\nFixed:%v\n", packageName, osPackage.Source.SourceName, introduced, fixed)
+
 		}
+		// if packageName == osPackage.Name {
+		// 	return VulnPackage{}, nil
+		// } else if packageName == osPackage.Source.SourceName {
+
+		// 	return VulnPackage{}, nil
+		// }
 	}
 
 	return VulnPackage{}, nil //fmt.Errorf("unable to match the vulnerable packages for some unknown reason *sigh*\n")
@@ -230,7 +247,7 @@ func createVulnPackage(seen map[string]bool, result Result, vulnPackage VulnPack
 	//key = pkg.name+CVE-ID
 	key := vulnPackage.PackageName + vulnPackage.CveId
 	if _, ok := seen[key]; ok {
-		return VulnPackage{}, fmt.Errorf("found duplicate CVE entry for the package:%v CVE-ID:%v\n", vulnPackage.PackageName, vulnPackage.CveId)
+		return VulnPackage{}, fmt.Errorf("found duplicate CVE entry for the package:%v CVE-ID:%v", vulnPackage.PackageName, vulnPackage.CveId)
 	} else {
 		//add the entry to the map
 		seen[key] = true
@@ -239,5 +256,5 @@ func createVulnPackage(seen map[string]bool, result Result, vulnPackage VulnPack
 		//package vulnerable
 		return vulnPackage, nil
 	}
-	return VulnPackage{}, fmt.Errorf("HOW DID A VULN PACKAGE GET HERE!!?\n")
+	return VulnPackage{}, fmt.Errorf("HOW DID A VULN PACKAGE GET HERE!!?")
 }

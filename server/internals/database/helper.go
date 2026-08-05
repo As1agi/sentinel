@@ -50,7 +50,7 @@ func prepareBatchStatementsSBOMInsert(tx *sql.Tx) (*sql.Stmt, *sql.Stmt, error) 
 
 	upstreamStmt, err := tx.Prepare(upstreamQuery)
 	if err != nil {
-		cveStmt.Close()
+		_ = cveStmt.Close()
 		return nil, nil, err
 	}
 

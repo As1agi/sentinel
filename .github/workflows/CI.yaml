@@ -1,0 +1,71 @@
+name: sentinel-ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  audit-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            critical:
+              - 'LICENSE'
+              - '.github/workflows/**'
+
+      - name: Alert on Critical File Changes
+        if: ${{ steps.filter.outputs.critical == 'true' }}
+        run: |
+          echo "::warning title=Critical Files Modified::The LICENSE or CI workflow files were modified in this run. Review carefully."
+
+          echo "### ⚠️ Critical Files Modified" >> $GITHUB_STEP_SUMMARY
+          echo "Changes were detected in either the \`LICENSE\` or the CI workflows (\`.github/workflows/\`). Please ensure these changes are intentional." >> $GITHUB_STEP_SUMMARY
+
+  lint-and-format:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [server, sbom]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.4"
+          cache: true
+
+      - name: Check Formatting (${{ matrix.component }})
+        working-directory: ./${{ matrix.component }}
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files in /${{ matrix.component }} are not formatted properly:"
+            echo "$UNFORMATTED"
+            echo "Run 'go fmt ./...' locally before pushing."
+            exit 1
+          fi
+
+      - name: Verify go.mod is tidy (${{ matrix.component }})
+        working-directory: ./${{ matrix.component }}
+        run: |
+          go mod tidy
+          if [ ! -z "$(git status --porcelain go.mod go.sum)" ]; then
+            echo "go.mod or go.sum is not tidy in /${{ matrix.component }}. Run 'go mod tidy' locally before pushing."
+            exit 1
+          fi
+
+      - name: Lint (${{ matrix.component }})
+        working-directory: ./${{ matrix.component }}
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          $(go env GOPATH)/bin/golangci-lint run
