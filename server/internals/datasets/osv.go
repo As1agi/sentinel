@@ -32,13 +32,12 @@ func OsvNormalize() error {
 		return fmt.Errorf("getting save path: %w", err)
 	}
 
-	log.Println("[*] Starting concurrent traversal of OSV data directories...")
-
 	outFile, err := os.Create(jsonCveSavePath)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
 	defer func() { _ = outFile.Close() }()
+	log.Println("[*] Starting concurrent traversal of OSV data directories...")
 
 	if _, err = outFile.WriteString("[\n"); err != nil {
 		return fmt.Errorf("failed writing opening bracket: %w", err)
@@ -50,7 +49,7 @@ func OsvNormalize() error {
 
 	var wg sync.WaitGroup
 
-	go startProcessFileWorkers(fileProcessWorkersCount, &wg, pathsChan, normalizedVulnChan)
+	go startFileProcessWorkers(fileProcessWorkersCount, &wg, pathsChan, normalizedVulnChan)
 
 	// start worker for writing files to the disk
 	fileCountChan := make(chan int)
@@ -112,7 +111,7 @@ func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVul
 // startFileProcessWorkers starts a group of n workers which process raw OSV data(for now) and output them into a channel
 // ... pathsChan is a channel with the paths to the raw json data will be read from
 // ...normalizedVulnChan is the channel which the normalized vulns will be streamed to
-func startProcessFileWorkers(workersCount int, wg *sync.WaitGroup, pathsChan chan string, normalizedVulnChan chan []normalizedVuln) {
+func startFileProcessWorkers(workersCount int, wg *sync.WaitGroup, pathsChan chan string, normalizedVulnChan chan []normalizedVuln) {
 	for i := 0; i < workersCount; i++ {
 		wg.Add(1)
 		go func() {
