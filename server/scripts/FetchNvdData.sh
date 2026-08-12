@@ -2,6 +2,10 @@
 
 set -eou pipefail
 
+
+BASE_DIR="${HOME}/.local/share/sentinel"
+DATA_DIR="${BASE_DIR}/data/cve/nvd/raw"
+
 # Ensure jq is available for JSON validation
 command -v jq >/dev/null 2>&1 || { echo "[-] Error: 'jq' is required but not installed." >&2; exit 1; }
 
@@ -10,16 +14,14 @@ declare -A FEEDS=(
     ["debian"]="https://services.nvd.nist.gov/rest/json/cves/2.0?virtualMatchString=cpe:2.3:o:debian:debian_linux"
 )
 
-BASE_DIR="${HOME}/.local/share/sentinel"
-DATA_DIR="${BASE_DIR}/data/cve/nvd/raw"
-
 for distro in "${!FEEDS[@]}"; do
     target_dir="${DATA_DIR}/${distro}"
     json_file="${target_dir}/${distro}.json"
     tmp_json="${json_file}.tmp"
     url="${FEEDS[${distro}]}"
 
-    mkdir -p "${target_dir}"
+    if [[ ! -f $"target_dir" ]]; then mkdir -p "${target_dir}" 
+    fi
 
     echo "[*] Processing ${distro} NVD JSON feed..."
 
