@@ -35,7 +35,8 @@ chmod +x "${SERVER_BIN}" "${SBOM_BIN}"
 
 # Fetch CVEs & fill up the DB
 echo "[+] Executing CVE fetch pipeline..."
-bash "${SERVER_SCRIPT_DIR}/FetchCveData.sh"
+bash "${SERVER_SCRIPT_DIR}/FetchOsvData.sh"
+bash "${SERVER_SCRIPT_DIR}/FetchNvdData.sh"
 echo "[+] Fetch pipeline completed..."
 
 echo "[+] Populating database..."

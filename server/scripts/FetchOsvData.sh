@@ -24,13 +24,14 @@ for distro in "${DISTROS[@]}"; do
         fi
     fi
 
-    #  Conditional Fetch using curl -z
-    # -z "${zip_file}": Only fetch if remote file is NEWER than local zip_file
-    # -o "${tmp_zip}": Stream incoming download to temporary file
+
     rm -f "${tmp_zip}"
 
     echo "    [*] Checking remote repository for updates..."
 
+    #  Conditional Fetch using curl -z
+    # -z "${zip_file}": Only fetch if remote file is NEWER than local zip_file
+    # -o "${tmp_zip}": Stream incoming download to temporary file
     if [[ -f "${zip_file}" ]]; then
         # Local file exists: send If-Modified-Since header
         curl -s -L -z "${zip_file}" -o "${tmp_zip}" "${url}"

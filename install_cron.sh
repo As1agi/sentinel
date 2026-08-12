@@ -17,7 +17,7 @@ CRON_TAG="# SENTINEL_CRON_JOB"
 
 
 # Quoted paths protect against directory names containing spaces
-CRON_JOB="* */18 * * * cd \"${PROJECT_DIR}\" && ./sentinel.sh >> \"${CRON_LOG}\" 2>&1 ${CRON_TAG}"
+CRON_JOB="0 */18 * * * flock -n \"${PROJECT_DIR}/sentinel.lock\" -c \"cd \\\"${PROJECT_DIR}\\\" && ./sentinel.sh\" >> \"${CRON_LOG}\" 2>&1 ${CRON_TAG}"
 
 echo "[+] Detecting environment..."
 echo "    User: ${RUN_USER}"
