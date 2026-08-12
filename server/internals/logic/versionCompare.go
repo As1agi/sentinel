@@ -121,7 +121,7 @@ func MatchDebian(installed, introduced, fixed string) (Result, error) {
 
 // MatchSemver checks if an application dependency falls within [introduced, fixed)
 func MatchSemver(installed, introduced, fixed string) (Result, error) {
-	if installed != "" {
+	if installed == "" {
 		return InvalidVersion, fmt.Errorf("invalid semver installed version not found")
 	}
 	vInst, err := version.NewVersion(installed)
