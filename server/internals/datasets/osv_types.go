@@ -1,14 +1,14 @@
-package dataset
+package datasets
 
 // Upstream OSV structural definitions (only matching the fields we want to extract)
-type OSVAdvisory struct {
+type OsvAdvisory struct {
 	ID       string        `json:"id"`
 	Upstream []string      `json:"upstream,omitempty"`
 	Aliases  []string      `json:"aliases,omitempty"`
-	Affected []OSVAffected `json:"affected,omitempty"`
+	Affected []OsvAffected `json:"affected,omitempty"`
 }
 
-type OSVAffected struct {
+type OsvAffected struct {
 	Package struct {
 		Ecosystem string `json:"ecosystem"`
 		Name      string `json:"name"`
@@ -16,13 +16,13 @@ type OSVAffected struct {
 	} `json:"package"`
 	Ranges []struct {
 		Type   string     `json:"type"`
-		Events []OSVEvent `json:"events"`
+		Events []OsvEvent `json:"events"`
 	} `json:"ranges"`
 	//Versions []string `json:"versions"` todo uncomment for data enrichment later on
 	//EcosystemSpecific EcosystemSpecificBinaries `json:"ecosystem_specific"`
 }
 
-type OSVEvent struct {
+type OsvEvent struct {
 	Introduced string `json:"introduced,omitempty"`
 	Fixed      string `json:"fixed,omitempty"`
 }

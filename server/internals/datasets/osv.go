@@ -1,24 +1,13 @@
-package dataset
+package datasets
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
-	"server/internals"
 	"server/internals/config"
 	"strings"
 	"sync"
 )
-
-const (
-	fileProcessWorkersCount = 5
-)
-
-// CleanOSV transforms the raw OSV.dev CVE data and saves it to the cveSavePath
-type normalizedVuln internals.NormalizedVuln
 
 // OsvNormalize orchestrates the concurrent parsing of OSV records
 func OsvNormalize() error {
@@ -78,100 +67,8 @@ func OsvNormalize() error {
 	return nil
 }
 
-func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
-	err := filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && d.Name() != "normalized.json" && strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
-			pathsChan <- path
-		} else if d.IsDir() {
-			//I used this for debugging
-			log.Printf("current directory %v\n", d.Name())
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error walking directory %+v", err)
-	}
-
-	return nil
-}
-
-func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, fileCountChan chan int) {
-	fileCount := 0
-	isFirstRecord := true
-	for vulns := range normalizedVulnChan {
-		if err := writeVulnsToDisk(outFile, vulns, &isFirstRecord); err != nil {
-			fmt.Printf("Disk write error: %v", err)
-		}
-		fileCount++
-	}
-	fileCountChan <- fileCount
-}
-
-// startFileProcessWorkers starts a group of n workers which process raw OSV data(for now) and output them into a channel
-// ... pathsChan is a channel with the paths to the raw json data will be read from
-// ...normalizedVulnChan is the channel which the normalized vulns will be streamed to
-func startFileProcessWorkers(workersCount int, wg *sync.WaitGroup, pathsChan chan string, normalizedVulnChan chan []normalizedVuln) {
-	for i := 0; i < workersCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for path := range pathsChan {
-				vulns := processFile(path)
-				if len(vulns) > 0 {
-					normalizedVulnChan <- vulns
-				}
-			}
-		}()
-	}
-}
-
-// processFile normalizes json entry
-func processFile(path string) []normalizedVuln {
-	fileBytes, err := os.ReadFile(path)
-	if err != nil {
-		log.Printf("[!] Error reading file %s: %v\n", path, err)
-		return nil
-	}
-
-	var advisory OSVAdvisory
-	if err := json.Unmarshal(fileBytes, &advisory); err != nil {
-		log.Printf("[!] Failed to parse %s: %v\n", path, err)
-		return nil
-	}
-
-	return normalize(advisory)
-}
-
-// writeVulnToDisk writes a single vuln entry to the disk
-func writeVulnsToDisk(outFile *os.File, vulns []normalizedVuln, isFirstRecord *bool) error {
-	for _, vuln := range vulns {
-		b, err := json.Marshal(vuln)
-		if err != nil {
-			fmt.Printf("[!] Failed to marshal record: %v\n", err)
-			continue
-		}
-
-		if !*isFirstRecord {
-			if _, err := outFile.WriteString(",\n"); err != nil {
-				return fmt.Errorf("error writting to the outfile %w", err)
-			}
-		}
-
-		if _, err := outFile.Write(b); err != nil {
-			return fmt.Errorf("error writting to the outfile %w", err)
-		}
-
-		*isFirstRecord = false
-		//recordCount++
-	}
-	return nil
-}
-
-// cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by the vulnerability
-func normalize(advisory OSVAdvisory) []normalizedVuln {
+// cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by a single vulnerability
+func osvAdvisoryNormalize(advisory *OsvAdvisory) []normalizedVuln {
 
 	var records []normalizedVuln
 	n := &normalizedVuln{}
@@ -201,6 +98,24 @@ func normalize(advisory OSVAdvisory) []normalizedVuln {
 	return records
 }
 
+// startFileProcessWorkers starts a group of n workers which process raw OSV data(for now) and output them into a channel
+// ... pathsChan is a channel with the paths to the raw json data will be read from
+// ...normalizedVulnChan is the channel which the normalized vulns will be streamed to
+func startFileProcessWorkers(workersCount int, wg *sync.WaitGroup, pathsChan chan string, normalizedVulnChan chan []normalizedVuln) {
+	for i := 0; i < workersCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for path := range pathsChan {
+				vulns := processFile[OsvAdvisory](path, osvAdvisoryNormalize)
+				if len(vulns) > 0 {
+					normalizedVulnChan <- vulns
+				}
+			}
+		}()
+	}
+}
+
 // func to get the real cve ID and remove the prepended UBUNTU-*ETC
 func getOsvCveId(advisoryID string) string {
 	// Split into a maximum of 2 parts: ["UBUNTU", "CVE-2022-0987"]
@@ -216,7 +131,7 @@ func getOsvCveId(advisoryID string) string {
 }
 
 // parseEvents parses the introduced and fixed events for the CVE record
-func parseEvents(events []OSVEvent, n *normalizedVuln) []normalizedVuln {
+func parseEvents(events []OsvEvent, n *normalizedVuln) []normalizedVuln {
 	var records []normalizedVuln
 	var currentIntroduced string
 	totalEvents := len(events)
