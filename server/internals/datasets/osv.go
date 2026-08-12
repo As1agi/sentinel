@@ -93,6 +93,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	if err != nil {
 		return fmt.Errorf("error walking directory %+v", err)
 	}
+
 	return nil
 }
 
