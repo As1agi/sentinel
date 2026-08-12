@@ -6,51 +6,37 @@ import (
 	"path/filepath"
 )
 
-// SupportedDistros centralizes the list of distros so adding new feeds takes 1 line.
-var SupportedDistros = []string{"ubuntu", "debian"}
+var (
+	supportedDistros  = []string{"ubuntu", "debian"}
+	supportedDatasets = []string{"osv", "nvd"}
+)
 
-// InitDirectories ensures all required filesystem paths exist before app startup.
-func InitDirectories() error {
-	rawDir, err := GetRawOsvDir()
-	if err != nil {
-		return fmt.Errorf("failed to resolve raw OSV directory: %w", err)
-	}
-
-	cleanFile, err := GetCleanOsvJsonPath()
-	if err != nil {
-		return fmt.Errorf("failed to resolve clean OSV path: %w", err)
-	}
-
-	// Target parent directories ONLY (filepath.Dir converts .../clean/clean.json -> .../clean)
-	dirs := []string{
-		filepath.Dir(cleanFile),
-	}
-
-	//  Dynamically add raw distro directories
-	for _, distro := range SupportedDistros {
-		dirs = append(dirs, filepath.Join(rawDir, distro))
-	}
-
-	//  Create all directories in a single pass
-	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
-		}
-	}
-
-	return nil
+func SupportedDistros() []string {
+	distros := make([]string, len(supportedDistros))
+	copy(distros, supportedDistros)
+	return distros
 }
 
-// GetBaseDir returns /home/<user>/.local/share/sentinel
+func SupportedDatasets() []string {
+	datasets := make([]string, len(supportedDatasets))
+	copy(datasets, supportedDatasets)
+	return datasets
+}
+
+// GetBaseDir resolves path following the XDG Base Directory Specification
 func GetBaseDir() (string, error) {
+	if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
+		return filepath.Join(xdgData, "sentinel"), nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to resolve user home directory: %w", err)
 	}
 	return filepath.Join(home, ".local", "share", "sentinel"), nil
 }
 
-// GetDBPath returns /home/<user>/.local/share/sentinel/sentinel.db
+// GetDBPath returns /<baseDir>/sentinel.db
 func GetDBPath() (string, error) {
 	baseDir, err := GetBaseDir()
 	if err != nil {
@@ -59,29 +45,67 @@ func GetDBPath() (string, error) {
 	return filepath.Join(baseDir, "sentinel.db"), nil
 }
 
-// GetBaseOsvDir returns /home/<user>/.local/share/sentinel/data/cve/osv
-func GetBaseOsvDir() (string, error) {
+// GetDatasetBaseDir returns /<baseDir>/data/<dataset>/<distro>/
+func GetDatasetBaseDir(dataset string) (string, error) {
 	baseDir, err := GetBaseDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(baseDir, "data", "cve", "osv"), nil
+	return filepath.Join(baseDir, "data", "cve", dataset), nil
 }
 
-// GetRawOsvDir returns /home/<user>/.local/share/sentinel/data/cve/osv/raw
-func GetRawOsvDir() (string, error) {
-	baseDir, err := GetBaseOsvDir()
+func GetDatasetDistroBaseDir(distro, dataset string) (string, error) {
+	baseDir, err := GetDatasetRawCveDir(dataset)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(baseDir, distro), nil
+}
+
+// GetDatasetRawCveDir returns /<baseDir>/data/<dataset>/raw
+func GetDatasetRawCveDir(dataset string) (string, error) {
+	baseDir, err := GetDatasetBaseDir(dataset)
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(baseDir, "raw"), nil
 }
 
-// GetCleanOsvJsonPath returns /home/<user>/.local/share/sentinel/data/cve/osv/clean/clean.json
-func GetCleanOsvJsonPath() (string, error) {
-	baseDir, err := GetBaseOsvDir()
+// GetNormalizedCveJsonPath returns /<baseDir>/data/<dataset>/normalized/normalized.json
+func GetNormalizedCveJsonPath(dataset string) (string, error) {
+	normDir, err := GetDatasetBaseDir(dataset)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(baseDir, "clean", "clean.json"), nil
+	return filepath.Join(normDir, "normalized.json"), nil
+}
+
+// InitDirectories initializes the directory hierarchy on the filesystem before ingestion starts
+func InitDirectories() error {
+	baseDir, err := GetBaseDir()
+	if err != nil {
+		return err
+	}
+
+	// Pre-allocate slice with base directory capacity
+	dirsToCreate := []string{baseDir}
+
+	for _, distro := range supportedDistros {
+		for _, dataset := range supportedDatasets {
+			rawDir, err := GetDatasetRawCveDir(dataset)
+			if err != nil {
+				return fmt.Errorf("failed to resolve raw dir for %s/%s: %w", distro, dataset, err)
+			}
+
+			dirsToCreate = append(dirsToCreate, rawDir)
+		}
+	}
+
+	for _, dir := range dirsToCreate {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	return nil
 }

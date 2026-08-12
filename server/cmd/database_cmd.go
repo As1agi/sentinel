@@ -52,7 +52,7 @@ func CleanReadAllCveIntoDataBase(db *sql.DB) error {
 
 func CleanReadOsvDataIntoDB(db *sql.DB) error {
 	//the directory for the OSV data
-	cleanOsvJsonPath, err := config.GetCleanOsvJsonPath()
+	cleanOsvJsonPath, err := config.GetNormalizedCveJsonPath("osv")
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func CleanReadOsvDataIntoDB(db *sql.DB) error {
 		return err
 	}
 
-	err = database.ReadCveJsonIntoDataBase(db, cleanOsvJsonPath)
+	err = database.ReadNormalizeCveIntoDataBase(db, cleanOsvJsonPath)
 	if err != nil {
 		return err
 	}

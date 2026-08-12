@@ -22,12 +22,13 @@ type normalizedVuln internals.NormalizedVuln
 
 // OsvNormalize orchestrates the concurrent parsing of OSV records
 func OsvNormalize() error {
-	sourceDir, err := config.GetRawOsvDir()
+	//we get the base directory with the raw CVE files
+	sourceDir, err := config.GetDatasetRawCveDir("osv")
 	if err != nil {
 		return fmt.Errorf("getting source dir: %w", err)
 	}
 
-	jsonCveSavePath, err := config.GetCleanOsvJsonPath()
+	jsonCveSavePath, err := config.GetNormalizedCveJsonPath("osv")
 	if err != nil {
 		return fmt.Errorf("getting save path: %w", err)
 	}
@@ -82,7 +83,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 		if err != nil {
 			return err
 		}
-		if !d.IsDir() && strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
+		if !d.IsDir() && d.Name() != "normalized.json" && strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
 			pathsChan <- path
 		} else if d.IsDir() {
 			//I used this for debugging

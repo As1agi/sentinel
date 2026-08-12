@@ -16,22 +16,8 @@ const (
 	BatchSize = 5000
 )
 
-// ReadCveJsonIntoDataBase reads in data from a json file which has an array of CleanVulnerability
-// into a database with the correct schema
-
-const (
-	cveInsertQuery = `
-    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed)
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
-
-	upstreamInsertQuery = `
-    INSERT INTO upstream (advisory_id, upstream_id)
-    VALUES (?, ?) ON CONFLICT DO NOTHING;`
-)
-
-// ReadCveJsonIntoDataBase manages file resources, compiles statement plans on the DB handle,
-// and delegates ingestion streaming into thB
-func ReadCveJsonIntoDataBase(db *sql.DB, cveJsonPath string) error {
+// ReadCveJsonIntoDataBase reads in normalized CVE dat from a json file into a database with the correct schema
+func ReadNormalizeCveIntoDataBase(db *sql.DB, cveJsonPath string) error {
 	file, err := os.Open(cveJsonPath)
 	if err != nil {
 		return fmt.Errorf("failed to open CVE dataset %s: %w", cveJsonPath, err)
@@ -40,12 +26,19 @@ func ReadCveJsonIntoDataBase(db *sql.DB, cveJsonPath string) error {
 		_ = file.Close()
 	}()
 
+	//todo update to modify the data and add more info on conflict
+	cveInsertQuery := `
+    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed)
+    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
 	cveDbStmt, err := db.Prepare(cveInsertQuery)
 	if err != nil {
 		return fmt.Errorf("failed to prepare cve query: %w", err)
 	}
 	defer func() { _ = cveDbStmt.Close() }()
 
+	upstreamInsertQuery := `
+    INSERT INTO upstream (advisory_id, upstream_id)
+    VALUES (?, ?) ON CONFLICT DO NOTHING;`
 	upstreamDbStmt, err := db.Prepare(upstreamInsertQuery)
 	if err != nil {
 		return fmt.Errorf("failed to prepare upstream query: %w", err)
@@ -63,7 +56,7 @@ func ReadCveJsonIntoDataBase(db *sql.DB, cveJsonPath string) error {
 	return nil
 }
 
-// streamAndCommitCves streams JSON objects and rotates transaction chunks.
+// streamAndCommitCves streams Noramlized CVEs into the database
 func streamAndCommitCves(
 	db *sql.DB,
 	file *os.File,
