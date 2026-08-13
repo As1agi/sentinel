@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"server/internals"
 	"strings"
+	"sync"
 )
 
 const (
@@ -28,6 +29,7 @@ func ExtractCVE(rawID string) string {
 	return rawID
 }
 
+// walkDirWritePathToChan moves through directories and writes the paths to the pathsChan
 func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	err := filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -48,11 +50,11 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	return nil
 }
 
+// streamFilesToDisks writes normalized CVE files from the normalizedVulnChan to the outFile
 func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, fileCountChan chan int) {
 	fileCount := 0
-	isFirstRecord := true
 	for vulns := range normalizedVulnChan {
-		if err := writeVulnsToDisk(outFile, vulns, &isFirstRecord); err != nil {
+		if err := writeVulnsToDisk(outFile, vulns); err != nil {
 			fmt.Printf("Disk write error: %v", err)
 		}
 		fileCount++
@@ -60,7 +62,34 @@ func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVul
 	fileCountChan <- fileCount
 }
 
-// processFile normalizes json entry
+// fileProcessWorkersParams holds the parameters for the startFileProcessWorkers func
+type fileProcessWorkersParams[T any] struct {
+	workersCount       int
+	waitGroup          *sync.WaitGroup
+	pathsChan          chan string
+	normalizedVulnChan chan []normalizedVuln
+	normalizeFunc      func(*T) []normalizedVuln
+}
+
+// startFileProcessWorkers initiates the unmarshalling and normalization of raw CVE vuln files and streams the normalized vulns
+// into the normalizedVuln Channel
+// takes the normalization function and the struct as an argument
+func startFileProcessWorkers[T any](params fileProcessWorkersParams[T]) {
+	for i := 0; i < params.workersCount; i++ {
+		params.waitGroup.Add(1)
+		go func() {
+			defer params.waitGroup.Done()
+			for path := range params.pathsChan {
+				vulns := processFile[T](path, params.normalizeFunc)
+				if len(vulns) > 0 {
+					params.normalizedVulnChan <- vulns
+				}
+			}
+		}()
+	}
+}
+
+// processFile normalizes json CVE entries of type T
 func processFile[T any](path string, normalize func(*T) []normalizedVuln) []normalizedVuln {
 	fileBytes, err := os.ReadFile(path)
 	if err != nil {
@@ -79,7 +108,7 @@ func processFile[T any](path string, normalize func(*T) []normalizedVuln) []norm
 }
 
 // writeVulnToDisk writes a single vuln entry to the disk
-func writeVulnsToDisk(outFile *os.File, vulns []normalizedVuln, isFirstRecord *bool) error {
+func writeVulnsToDisk(outFile *os.File, vulns []normalizedVuln) error {
 	for _, vuln := range vulns {
 		b, err := json.Marshal(vuln)
 		if err != nil {
@@ -87,18 +116,11 @@ func writeVulnsToDisk(outFile *os.File, vulns []normalizedVuln, isFirstRecord *b
 			continue
 		}
 
-		if !*isFirstRecord {
-			if _, err := outFile.WriteString(",\n"); err != nil {
-				return fmt.Errorf("error writting to the outfile %w", err)
-			}
-		}
-
+		b = append(b, '\n')
 		if _, err := outFile.Write(b); err != nil {
 			return fmt.Errorf("error writting to the outfile %w", err)
 		}
 
-		*isFirstRecord = false
-		//recordCount++
 	}
 	return nil
 }
