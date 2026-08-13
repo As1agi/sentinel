@@ -90,7 +90,7 @@ func startFileProcessWorkers[T any](params fileProcessWorkersParams[T]) {
 }
 
 // processFile normalizes json CVE entries of type T
-func processFile[T any](path string, normalize func(*T) []normalizedVuln) []normalizedVuln {
+func processFile[T any](path string, normalizeFunc func(*T) []normalizedVuln) []normalizedVuln {
 	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		log.Printf("[!] Error reading file %s: %v\n", path, err)
@@ -103,8 +103,7 @@ func processFile[T any](path string, normalize func(*T) []normalizedVuln) []norm
 		return nil
 	}
 
-	//we call the normalize func for the engine here
-	return normalize(&record)
+	return normalizeFunc(&record)
 }
 
 // writeVulnToDisk writes a single vuln entry to the disk

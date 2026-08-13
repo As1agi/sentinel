@@ -16,20 +16,8 @@ func init() {
 }
 
 // OsvNormalize orchestrates the concurrent parsing of OSV records
-func OsvNormalize() error {
-	//todo move config to main and just inject the paths and outfile etc
-	//we get the base directory with the raw CVE files
-	sourceDir, err := config.GetDatasetRawCveDir("osv")
-	if err != nil {
-		return fmt.Errorf("getting source dir: %w", err)
-	}
-
-	jsonCveSavePath, err := config.GetNormalizedCveJsonPath("osv")
-	if err != nil {
-		return fmt.Errorf("getting save path: %w", err)
-	}
-
-	outFile, err := os.Create(jsonCveSavePath)
+func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
+	outFile, err := os.Create(normalizedCveSavePath)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
@@ -46,24 +34,20 @@ func OsvNormalize() error {
 	}
 	go startFileProcessWorkers(p)
 
-	// start worker for writing files to the disk
 	fileCountChan := make(chan int)
 	go streamFilesToDisk(outFile, p.normalizedVulnChan, fileCountChan)
-	// Walk Directory
+
 	err = walkDirWritePathToChan(p.pathsChan, sourceDir)
 	if err != nil {
 		log.Printf("[-] Directory walk error: %v\n", err)
 	}
 
-	// Close paths to signal workers to stop
 	close(p.pathsChan)
-	// Wait for all workers to finish
+
 	p.waitGroup.Wait()
 
-	// Close results to signal writer to stop
 	close(p.normalizedVulnChan)
 
-	// Wait for writer to finish and get file count
 	fileCount := <-fileCountChan
 
 	log.Printf("[+] Parsed %d raw files concurrently \n", fileCount)
@@ -105,7 +89,6 @@ func parseEvents(events []OsvEvent, n *normalizedVuln) []normalizedVuln {
 	var records []normalizedVuln
 	var currentIntroduced string
 	totalEvents := len(events)
-
 	// this is in the case that we have many introduced fixed events which is very unlikely
 	//may have to delete this loop
 	for i, event := range events {
