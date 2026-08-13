@@ -64,9 +64,6 @@ func streamAndCommitCves(
 	upstreamDbStmt *sql.Stmt,
 ) (int, error) {
 	decoder := json.NewDecoder(file)
-	if _, err := decoder.Token(); err != nil { // Consume opening '['
-		return 0, fmt.Errorf("failed to read opening bracket: %w", err)
-	}
 
 	// Start initial transaction
 	tx, err := db.Begin()
@@ -112,10 +109,6 @@ func streamAndCommitCves(
 	// Flush remaining records
 	if err := tx.Commit(); err != nil {
 		return count, fmt.Errorf("failed to commit final batch: %w", err)
-	}
-
-	if _, err := decoder.Token(); err != nil { // Consume closing ']'
-		return count, fmt.Errorf("failed to read closing bracket: %w", err)
 	}
 
 	return count, nil
