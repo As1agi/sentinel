@@ -29,7 +29,7 @@ var databaseCmd = &cobra.Command{
 				}
 			}()
 
-			if err = CleanReadAllCveIntoDataBase(db); err != nil {
+			if err = normalizeReadAllCveIntoDataBase(db); err != nil {
 				log.Fatal(err)
 			}
 			return nil
@@ -42,27 +42,30 @@ var databaseCmd = &cobra.Command{
 		return fmt.Errorf("error invalid commands")
 	}}
 
-func CleanReadAllCveIntoDataBase(db *sql.DB) error {
-	//read OSV data
-	if err := CleanReadOsvDataIntoDB(db); err != nil {
+func normalizeReadAllCveIntoDataBase(db *sql.DB) error {
+	if err := normalizeReadOsvDataIntoDB(db); err != nil {
 		log.Fatal(err)
 	}
 	return nil
 }
 
-func CleanReadOsvDataIntoDB(db *sql.DB) error {
-	//the directory for the OSV data
-	cleanOsvJsonPath, err := config.GetNormalizedCveJsonPath("osv")
+func normalizeReadOsvDataIntoDB(db *sql.DB) error {
+
+	normalizedOsvSavePath, err := config.GetNormalizedCveJsonPath("osv")
+	if err != nil {
+		return err
+	}
+	osvBaseDir, err := config.GetDatasetRawCveDir("osv")
+	if err != nil {
+		return fmt.Errorf("getting source dir: %w", err)
+	}
+
+	err = dataset.OsvNormalize(osvBaseDir, normalizedOsvSavePath)
 	if err != nil {
 		return err
 	}
 
-	err = dataset.OsvNormalize()
-	if err != nil {
-		return err
-	}
-
-	err = database.ReadNormalizeCveIntoDataBase(db, cleanOsvJsonPath)
+	err = database.ReadNormalizeCveIntoDataBase(db, normalizedOsvSavePath)
 	if err != nil {
 		return err
 	}
