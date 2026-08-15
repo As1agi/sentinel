@@ -37,6 +37,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 		}
 		if !d.IsDir() && d.Name() != "normalized.json" && strings.HasSuffix(strings.ToLower(d.Name()), ".json") {
 			pathsChan <- path
+			//log.Printf("wrote %v to paths chan", d.Name())
 		} else if d.IsDir() {
 			//I used this for debugging
 			log.Printf("current directory %v\n", d.Name())
@@ -46,64 +47,56 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	if err != nil {
 		return fmt.Errorf("error walking directory %+v", err)
 	}
-
+	log.Printf("[+] Done walking path")
 	return nil
 }
 
 // streamFilesToDisks writes normalized CVE files from the normalizedVulnChan to the outFile
-func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, fileCountChan chan int) {
-	fileCount := 0
+func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, done chan struct{}) {
+
+	defer close(done)
 	for vulns := range normalizedVulnChan {
 		if err := writeVulnsToDisk(outFile, vulns); err != nil {
 			fmt.Printf("Disk write error: %v", err)
 		}
-		fileCount++
 	}
-	fileCountChan <- fileCount
 }
 
-// fileProcessWorkersParams holds the parameters for the startFileProcessWorkers func
-type fileProcessWorkersParams[T any] struct {
+// cveNormalizeWorkersParams holds the parameters for the startFileProcessWorkers func
+// where T is the struct for the raw data
+type cveNormalizeWorkersParams[T any] struct {
 	workersCount       int
 	waitGroup          *sync.WaitGroup
 	pathsChan          chan string
+	rawCveChan         chan T
 	normalizedVulnChan chan []normalizedVuln
 	normalizeFunc      func(*T) []normalizedVuln
 }
 
-// startFileProcessWorkers initiates the unmarshalling and normalization of raw CVE vuln files and streams the normalized vulns
-// into the normalizedVuln Channel
-// takes the normalization function and the struct as an argument
-func startFileProcessWorkers[T any](params fileProcessWorkersParams[T]) {
+// startFileProcessWorkers initiates the normalization of raw CVE vulns from the recordChan and streams them
+// into the normalizedVuln Channel.
+//
+// T is the struct for the raw data.
+func startCveNormalizeWorkers[T any](params *cveNormalizeWorkersParams[T]) {
 	for i := 0; i < params.workersCount; i++ {
 		params.waitGroup.Add(1)
 		go func() {
 			defer params.waitGroup.Done()
-			for path := range params.pathsChan {
-				vulns := processFile[T](path, params.normalizeFunc)
+			for record := range params.rawCveChan {
+				vulns := normalizeCve[T](record, params.normalizeFunc)
 				if len(vulns) > 0 {
 					params.normalizedVulnChan <- vulns
 				}
 			}
 		}()
 	}
+	params.waitGroup.Wait()
+	close(params.normalizedVulnChan)
 }
 
-// processFile normalizes json CVE entries of type T
-func processFile[T any](path string, normalizeFunc func(*T) []normalizedVuln) []normalizedVuln {
-	fileBytes, err := os.ReadFile(path)
-	if err != nil {
-		log.Printf("[!] Error reading file %s: %v\n", path, err)
-		return nil
-	}
-
-	var record T
-	if err := json.Unmarshal(fileBytes, &record); err != nil {
-		log.Printf("[!] Failed to parse %s: %v\n", path, err)
-		return nil
-	}
-
-	return normalizeFunc(&record)
+// processFile normalizes json CVE entries of type T using a normalize function passed
+func normalizeCve[T any](cve T, normalizeFunc func(*T) []normalizedVuln) []normalizedVuln {
+	return normalizeFunc(&cve)
 }
 
 // writeVulnToDisk writes a single vuln entry to the disk

@@ -4,14 +4,16 @@ Copyright © 2026 NAME HERE asiagijoseph1@gmail.com
 package cmd
 
 import (
+	"log"
 	"os"
+	"server/internals/config"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	port     string
-	populate bool
+	port                                 string
+	populate, populate_nvd, populate_osv bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,9 +39,16 @@ func Execute() {
 }
 
 func init() {
+	if err := config.InitDirectories(); err != nil {
+		log.Fatal(err)
+	}
 	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(serverCmd)
-	//flags
-	databaseCmd.Flags().BoolVar(&populate, "populate", false, "p")
+	//database flags
+	databaseCmd.Flags().BoolVarP(&populate, "populate", "p", false, "populate")
+	databaseCmd.Flags().BoolVar(&populate_nvd, "nvd", false, "nvd")
+	databaseCmd.Flags().BoolVar(&populate_osv, "osv", false, "osv")
+
+	//server flags
 	serverCmd.Flags().StringVarP(&port, "port", "p", "8080", "")
 }
