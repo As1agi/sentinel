@@ -16,13 +16,6 @@ func init() {
 
 }
 
-type extractCveWorkersParams[T any] struct {
-	workersCount int
-	pathsChannel *chan string
-	waitGroup    *sync.WaitGroup
-	rawCveChan   chan T
-}
-
 // OsvNormalize orchestrates the concurrent parsing of OSV records
 func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	outFile, err := os.Create(normalizedCveSavePath)
@@ -31,7 +24,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	}
 	defer func() { _ = outFile.Close() }()
 
-	log.Println("[*] Starting concurrent traversal of OSV data directories...")
+	log.Println("[*] Starting traversal of OSV data directories for normalization...")
 
 	p := &cveNormalizeWorkersParams[OsvAdvisory]{
 		workersCount:       fileProcessWorkersCount,
@@ -42,16 +35,18 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		normalizeFunc:      osvAdvisoryNormalize,
 	}
 
-	n := &extractCveWorkersParams[OsvAdvisory]{
+	n := &cveExtractWorkersParamas[OsvAdvisory]{
 		workersCount: fileProcessWorkersCount,
-		pathsChannel: &p.pathsChan,
+		pathsChan:    p.pathsChan,
 		waitGroup:    new(sync.WaitGroup),
 		rawCveChan:   p.rawCveChan,
+		extractFunc:  osvExtractCve,
 	}
+
 	fileCountChan := make(chan int)
 
-	go startCveNormalizeWorkers[OsvAdvisory](p)
-	go osvExtractCveWorkers(n)
+	go cveNormalizeWorkers(p)
+	go cveExtractWorkers(n)
 	//added this to the wg as a temporary fix to a concurrency issue where the file is closed before we
 	//finish writing into it
 	done := make(chan struct{})
@@ -72,24 +67,9 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	return nil
 }
 
-func osvExtractCveWorkers(p *extractCveWorkersParams[OsvAdvisory]) {
-
-	for i := 0; i < p.workersCount; i++ {
-		p.waitGroup.Add(1)
-		go func() {
-			defer p.waitGroup.Done()
-			for path := range *p.pathsChannel {
-				_ = osvExtractCve(p, path)
-			}
-		}()
-	}
-	p.waitGroup.Wait()
-	close(p.rawCveChan)
-}
-
 // nvdDecodeCveFile extracts the CVEs from an NVD file and streams the CVEs to the recordChan passed in the
 // nvdExtractCveWorkersParams
-func osvExtractCve(p *extractCveWorkersParams[OsvAdvisory], filePath string) error {
+func osvExtractCve(rawCveChan chan OsvAdvisory, filePath string) error {
 	var cve OsvAdvisory
 	file, err := os.ReadFile(filePath)
 	if err != nil {
@@ -100,7 +80,7 @@ func osvExtractCve(p *extractCveWorkersParams[OsvAdvisory], filePath string) err
 		return err
 	}
 
-	p.rawCveChan <- cve
+	rawCveChan <- cve
 	return nil
 }
 

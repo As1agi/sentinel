@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	port                                 string
-	populate, populate_nvd, populate_osv bool
+	port                                                         string
+	populate, populate_nvd, populate_osv, migrate, skipNormalize bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -45,9 +45,11 @@ func init() {
 	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(serverCmd)
 	//database flags
-	databaseCmd.Flags().BoolVarP(&populate, "populate", "p", false, "populate")
-	databaseCmd.Flags().BoolVar(&populate_nvd, "nvd", false, "nvd")
-	databaseCmd.Flags().BoolVar(&populate_osv, "osv", false, "osv")
+	databaseCmd.Flags().BoolVarP(&populate, "populate", "p", false, "populate the database")
+	databaseCmd.Flags().BoolVar(&skipNormalize, "skip-normalize", false, "skip normalization of the data")
+	databaseCmd.Flags().BoolVar(&migrate, "migrate", false, "migrate the database schema")
+	databaseCmd.Flags().BoolVar(&populate_nvd, "nvd", false, "add the NVD data to the database")
+	databaseCmd.Flags().BoolVar(&populate_osv, "osv", false, "add the OSV data to the database")
 
 	//server flags
 	serverCmd.Flags().StringVarP(&port, "port", "p", "8080", "")

@@ -26,10 +26,17 @@ func ReadNormalizeCveIntoDataBase(db *sql.DB, cveJsonPath string) error {
 		_ = file.Close()
 	}()
 
+	log.Printf("[+]Reading data in %v database ", cveJsonPath)
 	//todo update to modify the data and add more info on conflict
+
 	cveInsertQuery := `
-    INSERT INTO cve (advisory_id, ecosystem, package_name, purl, introduced, fixed)
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING;`
+    INSERT INTO cve (advisory_id, ecosystem,cpe,description,cvssmetric2,cvssmetric3, package_name, purl, introduced, fixed)
+    VALUES (?, ?, ?, ?, ?, ?,?,?,?,?) ON CONFLICT(advisory_id) DO UPDATE SET
+	cpe = excluded.cpe,
+	description=excluded.description,
+	cvssmetric2=excluded.cvssmetric2,
+	cvssmetric3=excluded.cvssmetric3
+	;`
 	cveDbStmt, err := db.Prepare(cveInsertQuery)
 	if err != nil {
 		return fmt.Errorf("failed to prepare cve query: %w", err)
@@ -115,7 +122,36 @@ func streamAndCommitCves(
 }
 
 func InsertCveAndUpstream(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
-	_, err := cveStmt.Exec(cve.AdvisoryID, cve.Ecosystem, cve.PackageName, cve.Purl, cve.Introduced, cve.Fixed)
+	//  `
+	//     INSERT INTO cve (advisory_id, ecosystem,cpe,description,cvssmetric2,cvssmetric3, package_name, purl, introduced, fixed)
+	//     VALUES (?, ?, ?, ?, ?, ?,?,?,?,?) ON CONFLICT(advisory_id) DO UPDATE SET
+	// 	cpe = excluded.cpe,
+	// 	description=excluded.description,
+	// 	cvssmetric2=excluded.cvssmetric2,
+	// 	cvssmetric3=excluded.cvssmetric3
+
+	cvssMetricV2, err := extractCvssV2(cve)
+	if err != nil {
+		return err
+	}
+	cvssMetricV3, err := extractCvssV3(cve)
+	if err != nil {
+		return err
+	}
+
+	_, err = cveStmt.Exec(
+		cve.AdvisoryID,
+		cve.Ecosystem,
+		cve.Cpe,
+		extractDescription(cve),
+		cvssMetricV2,
+		cvssMetricV3,
+		cve.PackageName,
+		cve.Purl,
+		cve.Introduced,
+		cve.Fixed,
+	)
+
 	if err != nil {
 		return fmt.Errorf("cve records execution failure: %w", err)
 	}
@@ -126,12 +162,12 @@ func InsertCveAndUpstream(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve interna
 			return fmt.Errorf("upstream linking mapping execution failure: %w", err)
 		}
 	}
-
+	//log.Fatalf("testing dragon")
 	return nil
 }
 
 // InsertSBOM inserts SBOM data into the database
-func InsertSBOM(db *sql.DB, s internals.SBOM) error {
+func InsertHostSbom(db *sql.DB, s internals.SBOM) error {
 	// Start the transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -218,7 +254,7 @@ func InsertSBOM(db *sql.DB, s internals.SBOM) error {
 	return nil
 }
 
-func InsertVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostName string, machineID string) error {
+func InsertHostVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostName string, machineID string) error {
 	log.Printf("Inserting Vulnpackages for hostname:%v\n", hostName)
 	//todo make a better upsert
 	query := `

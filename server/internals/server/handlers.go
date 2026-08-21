@@ -99,7 +99,7 @@ func (s *server) HandleSBOMData(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Printf("Payload received cleanly: %+v\n", data)
 
-	if err = database.InsertSBOM(s.db, data); err != nil {
+	if err = database.InsertHostSbom(s.db, data); err != nil {
 		log.Printf("Error inserting data into database %v", err)
 	}
 
@@ -121,7 +121,7 @@ func (s *server) AuditPackages(hostname string, machineID string) {
 	}
 	//fmt.Printf("\n\n\n vuln packages %++v\n", packages)
 	//save the packages to the database
-	if err := database.InsertVulnPackages(s.db, packages, hostname, machineID); err != nil {
+	if err := database.InsertHostVulnPackages(s.db, packages, hostname, machineID); err != nil {
 		log.Printf("error inserting vulnPackages to the database:%v\n", err)
 	}
 	log.Printf("[+]Successfuly inserted vulnpackages for the user:%v machineID:%v", hostname, machineID)

@@ -4,19 +4,17 @@ package internals
 
 // NormalizedVuln is the final structure for the CVE data which is stored in the database
 type NormalizedVuln struct {
-	AdvisoryID    string          `json:"advisory_id"`
-	Upstream      []string        `json:"upstream,omitempty"`
-	Ecosystem     string          `json:"ecosystem,omitempty"`
-	PackageName   string          `json:"package_name,omitempty"`
-	Purl          string          `json:"purl,omitempty"`
-	Cpe           string          `json:"cpe,omitempty"`
-	Description   []Descriptions  `json:"description,omitempty"`
-	CvssMetricV2  []CvssMetricV2  `json:"cvssMetricV2,omitempty"`
-	CvssMetricV3  []CvssMetricV30 `json:"cvssMetricV3,omitempty"`
-	Introduced    string          `json:"introduced,omitempty"`
-	StartOperator string          `json:"startOperator,omitempty"`
-	Fixed         string          `json:"fixed,omitempty"`
-	LastAffected  string          `json:"lastAffected,omitempty"`
+	AdvisoryID   string          `json:"advisory_id"`
+	Upstream     []string        `json:"upstream,omitempty"`
+	Ecosystem    string          `json:"ecosystem,omitempty"`
+	PackageName  string          `json:"package_name,omitempty"`
+	Purl         string          `json:"purl,omitempty"`
+	Cpe          string          `json:"cpe,omitempty"`
+	Description  []Descriptions  `json:"description,omitempty"`
+	CvssMetricV2 []CvssMetricV2  `json:"cvssMetricV2,omitempty"`
+	CvssMetricV3 []CvssMetricV30 `json:"cvssMetricV3,omitempty"`
+	Introduced   string          `json:"introduced,omitempty"`
+	Fixed        string          `json:"fixed,omitempty"`
 }
 
 type Descriptions struct {

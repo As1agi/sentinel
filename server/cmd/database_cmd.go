@@ -11,11 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// todo add command for migrate
+// todo clean up this sub sections dude
 var databaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "database",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		//func to pass flags and determine operation as pre-run , maybe use a bitmap or sth
 		if (populate_nvd || populate_osv) && !populate {
 			return fmt.Errorf("invalid flag config , use the -p flag to populate")
 		}
@@ -23,7 +24,10 @@ var databaseCmd = &cobra.Command{
 		if !populate {
 			return fmt.Errorf("please specify an action (e.g., -p --nvd or database -p)")
 		}
-
+		//for now we do this we shall arrange em later I suppose
+		if migrate {
+			database.InitSchema()
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,17 +46,14 @@ var databaseCmd = &cobra.Command{
 		}()
 
 		if runNVD && runOSV {
-			log.Printf("normalizing both")
 			if err = normalizeReadAllCveIntoDataBase(db); err != nil {
 				log.Fatal(err)
 			}
 		} else if runNVD {
-			log.Printf("normalizing nvd")
 			if err = normalizeReadNvdDataIntoDB(db); err != nil {
 				log.Fatal(err)
 			}
 		} else if runOSV {
-			log.Printf("normalizing osv")
 			if err := normalizeReadOsvDataIntoDB(db); err != nil {
 				log.Fatal(err)
 			}
@@ -65,7 +66,6 @@ func normalizeReadAllCveIntoDataBase(db *sql.DB) error {
 	if err := normalizeReadOsvDataIntoDB(db); err != nil {
 		return err
 	}
-
 	if err := normalizeReadNvdDataIntoDB(db); err != nil {
 		return err
 	}
@@ -73,26 +73,32 @@ func normalizeReadAllCveIntoDataBase(db *sql.DB) error {
 }
 
 func normalizeReadNvdDataIntoDB(db *sql.DB) error {
+	var err error
 	normalizedOsvSavePath, err := config.GetNormalizedCveJsonPath("nvd")
 	if err != nil {
 		return err
 	}
-
 	nvdBaseDir, err := config.GetDatasetRawCveDir("nvd")
 	if err != nil {
 		return fmt.Errorf("getting source dir: %w", err)
 	}
-	log.Printf("nvd base dir %v", nvdBaseDir)
-	err = dataset.NvdNormalize(nvdBaseDir, normalizedOsvSavePath)
+	if !skipNormalize {
+		//log.Printf("nvd base dir %v", nvdBaseDir)
+		err = dataset.NvdNormalize(nvdBaseDir, normalizedOsvSavePath)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = database.ReadNormalizeCveIntoDataBase(db, normalizedOsvSavePath)
 	if err != nil {
 		return err
 	}
-	//todo add normalize func here
+
 	return nil
 }
 
 func normalizeReadOsvDataIntoDB(db *sql.DB) error {
-
 	normalizedOsvSavePath, err := config.GetNormalizedCveJsonPath("osv")
 	if err != nil {
 		return err
@@ -102,15 +108,16 @@ func normalizeReadOsvDataIntoDB(db *sql.DB) error {
 		return fmt.Errorf("getting source dir: %w", err)
 	}
 
-	err = dataset.OsvNormalize(osvBaseDir, normalizedOsvSavePath)
-	if err != nil {
-		return err
+	if !skipNormalize {
+		err = dataset.OsvNormalize(osvBaseDir, normalizedOsvSavePath)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = database.ReadNormalizeCveIntoDataBase(db, normalizedOsvSavePath)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

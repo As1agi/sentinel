@@ -9,8 +9,9 @@ import (
 	"sync"
 )
 
+// todo ... also extract the ecosystem later on for more data
 func NvdNormalize(sourceDir string, normalizedJsonSavePath string) error {
-	log.Printf("began NVD normalization")
+	log.Printf("[*]NVD normalization")
 	outfile, err := os.Create(normalizedJsonSavePath)
 	if err != nil {
 		return fmt.Errorf("\terror opening file at path %v \n\t %v", normalizedJsonSavePath, err)
@@ -24,15 +25,17 @@ func NvdNormalize(sourceDir string, normalizedJsonSavePath string) error {
 		normalizeFunc:      nvdNormalizeAdvisory,
 	}
 
-	n := &extractCveWorkersParams[NvdAdvisory]{
+	n := &cveExtractWorkersParamas[NvdAdvisory]{
 		workersCount: fileProcessWorkersCount,
-		pathsChannel: &p.pathsChan,
+		pathsChan:    p.pathsChan,
 		waitGroup:    new(sync.WaitGroup),
 		rawCveChan:   p.rawCveChan,
+		extractFunc:  nvdExtractCve,
 	}
+
 	done := make(chan struct{})
-	go startCveNormalizeWorkers(p)
-	go nvdExtractCveWorkers(n)
+	go cveNormalizeWorkers(p)
+	go cveExtractWorkers(n)
 	go streamFilesToDisk(outfile, p.normalizedVulnChan, done)
 	if err := walkDirWritePathToChan(p.pathsChan, sourceDir); err != nil {
 		close(p.pathsChan)
@@ -68,27 +71,9 @@ func nvdNormalizeAdvisory(advisory *NvdAdvisory) []normalizedVuln {
 	return []normalizedVuln{n}
 }
 
-// starts a number of go-routines that actively extract the CVE data from NVD files and streams them to the
-// record chan provided in the nvdExtractCveWorkersParams
-func nvdExtractCveWorkers(n *extractCveWorkersParams[NvdAdvisory]) {
-	var filecount = 0
-	for i := 0; i < n.workersCount; i++ {
-		n.waitGroup.Add(1)
-		go func() {
-			defer n.waitGroup.Done()
-			for path := range *n.pathsChannel {
-				filecount++
-				_ = nvdExtractCve(n, path)
-			}
-		}()
-	}
-	n.waitGroup.Wait()
-	close(n.rawCveChan)
-}
+//todo only pass the single channel as a parameter
 
-// nvdDecodeCveFile extracts the CVEs from an NVD file and streams the CVEs to the recordChan passed in the
-// nvdExtractCveWorkersParams
-func nvdExtractCve(n *extractCveWorkersParams[NvdAdvisory], filePath string) error {
+func nvdExtractCve(rawCveChan chan NvdAdvisory, filePath string) error {
 	var cveWrapper struct {
 		Cve NvdAdvisory `json:"cve"`
 	}
@@ -119,7 +104,7 @@ func nvdExtractCve(n *extractCveWorkersParams[NvdAdvisory], filePath string) err
 			continue
 		}
 		//log.Printf("cve : %+v", cveWrapper.Cve)
-		n.rawCveChan <- cveWrapper.Cve
+		rawCveChan <- cveWrapper.Cve
 	}
 	return nil
 }

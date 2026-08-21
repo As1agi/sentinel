@@ -2,8 +2,10 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"server/internals"
 	"server/internals/config"
 )
 
@@ -42,6 +44,62 @@ type Prepare interface {
 type QueryDef struct {
 	Executor Prepare
 	Query    string
+}
+
+func extractDescription(cve internals.NormalizedVuln) string {
+	var (
+		lenDesc     int
+		description string
+	)
+
+	lenDesc = len(cve.Description)
+	if lenDesc < 1 {
+		//log.Printf("added empty desc")
+		description = "no description"
+	} else if lenDesc >= 1 {
+		//for now
+		description = cve.Description[0].Value
+	}
+
+	return description
+}
+
+func extractCvssV2(cve internals.NormalizedVuln) (string, error) {
+	var (
+		lenCvssV2    int
+		cvssMetricV2 []byte
+		err          error
+	)
+
+	lenCvssV2 = len(cve.CvssMetricV2)
+	if lenCvssV2 == 0 {
+		cvssMetricV2 = []byte("NA")
+	} else if lenCvssV2 >= 1 {
+		cvssMetricV2, err = json.Marshal(cve.CvssMetricV2)
+		if err != nil {
+			return "", fmt.Errorf("error extracting cvssv2 : %v", err)
+		}
+	}
+	return string(cvssMetricV2), nil
+}
+
+func extractCvssV3(cve internals.NormalizedVuln) (string, error) {
+	var (
+		lenCvssV3    int
+		cvssMetricV3 []byte
+		err          error
+	)
+
+	lenCvssV3 = len(cve.CvssMetricV3)
+	if lenCvssV3 == 0 {
+		cvssMetricV3 = []byte("NA")
+	} else if lenCvssV3 >= 1 {
+		cvssMetricV3, err = json.Marshal(cve.CvssMetricV3)
+		if err != nil {
+			return "", fmt.Errorf("error extracting cvssv2 : %v", err)
+		}
+	}
+	return string(cvssMetricV3), nil
 }
 
 // prepareBatchStatements returns an array of statements in the order they are passed
