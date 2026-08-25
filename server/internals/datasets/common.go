@@ -39,7 +39,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 			pathsChan <- path
 			//log.Printf("wrote %v to paths chan", d.Name())
 		} else if d.IsDir() {
-			//I used this for debugging
+			//I use this for debugging
 			log.Printf("current directory %v\n", d.Name())
 		}
 		return nil
@@ -47,13 +47,14 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	if err != nil {
 		return fmt.Errorf("error walking directory %+v", err)
 	}
-	log.Printf("[+] Done walking path")
+	//log.Printf("[+] Done walking path")
 	return nil
 }
 
+//todo implement separation of concerns
+
 // streamFilesToDisks writes normalized CVE files from the normalizedVulnChan to the outFile
 func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, done chan struct{}) {
-
 	defer close(done)
 	for vulns := range normalizedVulnChan {
 		if err := writeVulnsToDisk(outFile, vulns); err != nil {

@@ -40,7 +40,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		pathsChan:    p.pathsChan,
 		waitGroup:    new(sync.WaitGroup),
 		rawCveChan:   p.rawCveChan,
-		extractFunc:  osvExtractCve,
+		extractFunc:  osvExtractCveToChan,
 	}
 
 	fileCountChan := make(chan int)
@@ -57,7 +57,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		p.waitGroup.Wait()
 		return fmt.Errorf("error while walking path for NVD:%v", err)
 	}
-	//close paths chan first
+
 	close(p.pathsChan)
 	p.waitGroup.Wait()
 
@@ -69,19 +69,29 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 
 // nvdDecodeCveFile extracts the CVEs from an NVD file and streams the CVEs to the recordChan passed in the
 // nvdExtractCveWorkersParams
-func osvExtractCve(rawCveChan chan OsvAdvisory, filePath string) error {
-	var cve OsvAdvisory
-	file, err := os.ReadFile(filePath)
+func osvExtractCveToChan(rawCveChan chan OsvAdvisory, filePath string) error {
+	cve, err := osvExtractCve(filePath)
 	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal(file, &cve); err != nil {
-		return err
+		return fmt.Errorf("error extracting CVE from %v \n %v", filePath, err)
 	}
 
 	rawCveChan <- cve
 	return nil
+}
+
+func osvExtractCve(filePath string) (OsvAdvisory, error) {
+	var cve OsvAdvisory
+	//the OSV CVE data contain a single CVE entry in each json file so we can unmarshal directly
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		return cve, err
+	}
+
+	if err = json.Unmarshal(file, &cve); err != nil {
+		return cve, err
+	}
+
+	return cve, nil
 }
 
 // cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by a single vulnerability
