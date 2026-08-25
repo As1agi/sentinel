@@ -39,7 +39,7 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 			pathsChan <- path
 			//log.Printf("wrote %v to paths chan", d.Name())
 		} else if d.IsDir() {
-			//I used this for debugging
+			//I use this for debugging
 			log.Printf("current directory %v\n", d.Name())
 		}
 		return nil
@@ -47,19 +47,49 @@ func walkDirWritePathToChan(pathsChan chan string, sourceDir string) error {
 	if err != nil {
 		return fmt.Errorf("error walking directory %+v", err)
 	}
-	log.Printf("[+] Done walking path")
+	//log.Printf("[+] Done walking path")
 	return nil
 }
 
+//todo implement separation of concerns
+
 // streamFilesToDisks writes normalized CVE files from the normalizedVulnChan to the outFile
 func streamFilesToDisk(outFile *os.File, normalizedVulnChan chan []normalizedVuln, done chan struct{}) {
-
 	defer close(done)
 	for vulns := range normalizedVulnChan {
 		if err := writeVulnsToDisk(outFile, vulns); err != nil {
 			fmt.Printf("Disk write error: %v", err)
 		}
 	}
+}
+
+// ====================
+//todo define better constrains for the extract fun especially the parameters for the extract func
+
+type cveExtractWorkersParamas[T any] struct {
+	workersCount int
+	waitGroup    *sync.WaitGroup
+	pathsChan    chan string
+	rawCveChan   chan T
+	//functiontion to extract the CVE from an entry
+	extractFunc func(chan T, string) error
+}
+
+// todo separation of concerns , do not pass chanels as
+func cveExtractWorkers[T any](p *cveExtractWorkersParamas[T]) {
+	var filecount = 0
+	for i := 0; i < p.workersCount; i++ {
+		p.waitGroup.Add(1)
+		go func() {
+			defer p.waitGroup.Done()
+			for path := range p.pathsChan {
+				filecount++
+				_ = p.extractFunc(p.rawCveChan, path)
+			}
+		}()
+	}
+	p.waitGroup.Wait()
+	close(p.rawCveChan)
 }
 
 // cveNormalizeWorkersParams holds the parameters for the startFileProcessWorkers func
@@ -77,7 +107,7 @@ type cveNormalizeWorkersParams[T any] struct {
 // into the normalizedVuln Channel.
 //
 // T is the struct for the raw data.
-func startCveNormalizeWorkers[T any](params *cveNormalizeWorkersParams[T]) {
+func cveNormalizeWorkers[T any](params *cveNormalizeWorkersParams[T]) {
 	for i := 0; i < params.workersCount; i++ {
 		params.waitGroup.Add(1)
 		go func() {

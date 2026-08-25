@@ -16,13 +16,6 @@ func init() {
 
 }
 
-type extractCveWorkersParams[T any] struct {
-	workersCount int
-	pathsChannel *chan string
-	waitGroup    *sync.WaitGroup
-	rawCveChan   chan T
-}
-
 // OsvNormalize orchestrates the concurrent parsing of OSV records
 func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	outFile, err := os.Create(normalizedCveSavePath)
@@ -31,7 +24,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	}
 	defer func() { _ = outFile.Close() }()
 
-	log.Println("[*] Starting concurrent traversal of OSV data directories...")
+	log.Println("[*] Starting traversal of OSV data directories for normalization...")
 
 	p := &cveNormalizeWorkersParams[OsvAdvisory]{
 		workersCount:       fileProcessWorkersCount,
@@ -42,16 +35,18 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		normalizeFunc:      osvAdvisoryNormalize,
 	}
 
-	n := &extractCveWorkersParams[OsvAdvisory]{
+	n := &cveExtractWorkersParamas[OsvAdvisory]{
 		workersCount: fileProcessWorkersCount,
-		pathsChannel: &p.pathsChan,
+		pathsChan:    p.pathsChan,
 		waitGroup:    new(sync.WaitGroup),
 		rawCveChan:   p.rawCveChan,
+		extractFunc:  osvExtractCveToChan,
 	}
+
 	fileCountChan := make(chan int)
 
-	go startCveNormalizeWorkers[OsvAdvisory](p)
-	go osvExtractCveWorkers(n)
+	go cveNormalizeWorkers(p)
+	go cveExtractWorkers(n)
 	//added this to the wg as a temporary fix to a concurrency issue where the file is closed before we
 	//finish writing into it
 	done := make(chan struct{})
@@ -62,7 +57,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		p.waitGroup.Wait()
 		return fmt.Errorf("error while walking path for NVD:%v", err)
 	}
-	//close paths chan first
+
 	close(p.pathsChan)
 	p.waitGroup.Wait()
 
@@ -72,36 +67,31 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	return nil
 }
 
-func osvExtractCveWorkers(p *extractCveWorkersParams[OsvAdvisory]) {
-
-	for i := 0; i < p.workersCount; i++ {
-		p.waitGroup.Add(1)
-		go func() {
-			defer p.waitGroup.Done()
-			for path := range *p.pathsChannel {
-				_ = osvExtractCve(p, path)
-			}
-		}()
-	}
-	p.waitGroup.Wait()
-	close(p.rawCveChan)
-}
-
 // nvdDecodeCveFile extracts the CVEs from an NVD file and streams the CVEs to the recordChan passed in the
 // nvdExtractCveWorkersParams
-func osvExtractCve(p *extractCveWorkersParams[OsvAdvisory], filePath string) error {
+func osvExtractCveToChan(rawCveChan chan OsvAdvisory, filePath string) error {
+	cve, err := osvExtractCve(filePath)
+	if err != nil {
+		return fmt.Errorf("error extracting CVE from %v \n %v", filePath, err)
+	}
+
+	rawCveChan <- cve
+	return nil
+}
+
+func osvExtractCve(filePath string) (OsvAdvisory, error) {
 	var cve OsvAdvisory
+	//the OSV CVE data contain a single CVE entry in each json file so we can unmarshal directly
 	file, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
+		return cve, err
 	}
 
 	if err = json.Unmarshal(file, &cve); err != nil {
-		return err
+		return cve, err
 	}
 
-	p.rawCveChan <- cve
-	return nil
+	return cve, nil
 }
 
 // cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by a single vulnerability
