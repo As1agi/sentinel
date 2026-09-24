@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eou pipefail
 
-BASE_DIR="${HOME}/.local/share/sentinel"
+BASE_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/sentinel"
 OSV_DIR="${BASE_DIR}/data/cve/osv/raw"
 DISTROS=("Ubuntu" "Debian")
 
@@ -46,7 +46,6 @@ for distro in "${DISTROS[@]}"; do
         echo "    [=] Remote feed unchanged (HTTP 304). Local archive is up to date"
 
         rm -f "${tmp_zip}"
-        continue
     else
         # File downloaded -> Verify integrity before replacing local archive
         echo "    [*] New update received. Verifying archive integrity..."

@@ -3,7 +3,7 @@
 set -eou pipefail
 
 
-BASE_DIR="${HOME}/.local/share/sentinel"
+BASE_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/sentinel"
 DATA_DIR="${BASE_DIR}/data/cve/nvd/raw"
 
 # Ensure jq is available for JSON validation
@@ -20,7 +20,7 @@ for distro in "${!FEEDS[@]}"; do
     tmp_json="${json_file}.tmp"
     url="${FEEDS[${distro}]}"
 
-    if [[ ! -f $"target_dir" ]]; then mkdir -p "${target_dir}" 
+    if [[ ! -f "${target_dir}" ]]; then mkdir -p "${target_dir}" 
     fi
 
     echo "[*] Processing ${distro} NVD JSON feed..."

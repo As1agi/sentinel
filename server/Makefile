@@ -1,5 +1,5 @@
-.PHONY:	build css dev
-
+.PHONY:all build css dev
+all: build
 .ONESHELL:
 SHELL := /bin/bash
 
@@ -19,6 +19,7 @@ build: css
 	@echo "[*] Building server binary"
 	@mkdir -p build  
 #copy the assets and scripts into the build directory
+	@mkdir -p build/assets build/scripts
 	@cp ./assets -r build/assets 
 	@cp scripts -r build/scripts 
 
