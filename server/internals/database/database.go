@@ -23,7 +23,9 @@ func ReadNormalizeCveIntoDataBase(db *sql.DB, cveJsonPath string) error {
 		return fmt.Errorf("failed to open CVE dataset %s: %w", cveJsonPath, err)
 	}
 	defer func() {
-		_ = file.Close()
+		if fileCloseErr := file.Close(); fileCloseErr != nil {
+			log.Printf("error closing %v %v ", cveJsonPath, fileCloseErr)
+		}
 	}()
 
 	log.Printf("[+]Reading data in %v database ", cveJsonPath)
@@ -37,6 +39,7 @@ func ReadNormalizeCveIntoDataBase(db *sql.DB, cveJsonPath string) error {
 	cvssmetric2=excluded.cvssmetric2,
 	cvssmetric3=excluded.cvssmetric3
 	;`
+
 	cveDbStmt, err := db.Prepare(cveInsertQuery)
 	if err != nil {
 		return fmt.Errorf("failed to prepare cve query: %w", err)
@@ -91,7 +94,7 @@ func streamAndCommitCves(
 			return count, fmt.Errorf("failed to decode CVE object at index %d: %w", count, err)
 		}
 
-		if err := InsertCveAndUpstream(cveTxStmt, upstreamTxStmt, cve); err != nil {
+		if err := InsertCve(cveTxStmt, upstreamTxStmt, cve); err != nil {
 			_ = tx.Rollback()
 			return count, fmt.Errorf("write execution error at index %d: %w", count, err)
 		}
@@ -121,7 +124,7 @@ func streamAndCommitCves(
 	return count, nil
 }
 
-func InsertCveAndUpstream(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
+func InsertCve(cveStmt *sql.Stmt, upstreamStmt *sql.Stmt, cve internals.NormalizedVuln) error {
 	//  `
 	//     INSERT INTO cve (advisory_id, ecosystem,cpe,description,cvssmetric2,cvssmetric3, package_name, purl, introduced, fixed)
 	//     VALUES (?, ?, ?, ?, ?, ?,?,?,?,?) ON CONFLICT(advisory_id) DO UPDATE SET
@@ -276,8 +279,6 @@ func InsertHostVulnPackages(db *sql.DB, vulnPackages []logic.VulnPackage, hostNa
 
 	//todo use batching
 
-	//insert all the vuln packages into the DB
-	//p = package
 	for _, p := range vulnPackages {
 		if _, err = stmt.Exec(machineID, hostName, p.PackageName, p.Installed, p.Introduced, p.Fixed, p.Purl, p.CveId); err != nil {
 			_ = tx.Rollback()
@@ -308,13 +309,10 @@ func GetAvailableMachines(db *sql.DB) (map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute machines query: %w", err)
 	}
-	//  Defer closing rows to release the connection back to the pool safely
 	defer func() { _ = rows.Close() }()
 
-	// Initialize the map to prevent returning a nil map
 	machineMap := make(map[string]string)
 
-	//   Iterate through the dataset
 	for rows.Next() {
 		var machineID string
 		var hostname string

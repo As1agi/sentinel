@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+//todo -- read the package files directly from the OS instead of using systems commands
+
 // GatherOSPackages returns a software bill of materials containing packages for ANY distro using dpkg
 func GatherOSPackages(ctx context.Context) (*SBOM, error) {
 	// 1. DYNAMIC CAPABILITY CHECK: Verify if the system actually uses dpkg

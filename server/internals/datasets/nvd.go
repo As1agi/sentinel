@@ -108,7 +108,7 @@ func nvdExtractCve(filePath string) ([]NvdAdvisory, error) {
 	}
 
 	//we now decode and marshal the CVEs and add em to the channel
-	var cves []NvdAdvisory
+	var cves = make([]NvdAdvisory, 0, 5000)
 	for decoder.More() {
 		//wrapper for a CVE entry in the NVD dataset
 		var cveWrapper struct {

@@ -13,7 +13,7 @@ BASE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 # Server
 SERVER_DIR="${BASE_DIR}/server"
 SERVER_SCRIPT_DIR="${SERVER_DIR}/scripts"
-SERVER_BIN="${SERVER_DIR}/server"
+SERVER_BIN="${SERVER_DIR}/build/server"
 
 # SBOM
 SBOM_DIR="${BASE_DIR}/sbom"

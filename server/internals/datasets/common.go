@@ -131,6 +131,7 @@ func normalizeCve[T any](cve T, normalizeFunc func(*T) []normalizedVuln) []norma
 
 // writeVulnToDisk writes a single vuln entry to the disk
 func writeVulnsToDisk(outFile *os.File, vulns []normalizedVuln) error {
+	//using ndjson format
 	for _, vuln := range vulns {
 		b, err := json.Marshal(vuln)
 		if err != nil {
