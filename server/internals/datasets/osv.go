@@ -43,7 +43,7 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 		extractFunc:  osvExtractCveToChan,
 	}
 
-	fileCountChan := make(chan int)
+	//fileCountChan := make(chan int)
 
 	go cveNormalizeWorkers(p)
 	go cveExtractWorkers(n)
@@ -61,14 +61,12 @@ func OsvNormalize(sourceDir string, normalizedCveSavePath string) error {
 	close(p.pathsChan)
 	p.waitGroup.Wait()
 
-	close(fileCountChan)
+	//close(fileCountChan)
 	//log.Printf("[+] Parsed %d raw files concurrently \n", fileCount)
 	<-done
 	return nil
 }
 
-// nvdDecodeCveFile extracts the CVEs from an NVD file and streams the CVEs to the recordChan passed in the
-// nvdExtractCveWorkersParams
 func osvExtractCveToChan(rawCveChan chan OsvAdvisory, filePath string) error {
 	cve, err := osvExtractCve(filePath)
 	if err != nil {
@@ -79,6 +77,7 @@ func osvExtractCveToChan(rawCveChan chan OsvAdvisory, filePath string) error {
 	return nil
 }
 
+// Function to extract a CVE from an OSV.json entry
 func osvExtractCve(filePath string) (OsvAdvisory, error) {
 	var cve OsvAdvisory
 	//the OSV CVE data contain a single CVE entry in each json file so we can unmarshal directly
@@ -94,7 +93,7 @@ func osvExtractCve(filePath string) (OsvAdvisory, error) {
 	return cve, nil
 }
 
-// cleanVuln  builds and returns a SLICE of vulnerabilities for each distro affected by a single vulnerability
+// function to normalize a CVE entry from the OSV dataset
 func osvAdvisoryNormalize(advisory *OsvAdvisory) []normalizedVuln {
 
 	var records []normalizedVuln
@@ -139,7 +138,7 @@ func parseEvents(events []OsvEvent, n *normalizedVuln) []normalizedVuln {
 			if i == totalEvents-1 {
 				record := *n
 				record.Introduced = currentIntroduced
-				record.Fixed = "unfixed"
+				record.Fixed = ""
 				records = append(records, record)
 			}
 		}

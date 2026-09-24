@@ -33,17 +33,7 @@ func OpenDB() *sql.DB {
 		log.Fatalf("error connecting to database : %v\n", err)
 	}
 
-	//  Enable Foreign Keys (SQLite disables them by default for backwards compatibility)
 	return db
-}
-
-type Prepare interface {
-	Prepare(query string) (*sql.Stmt, error)
-}
-
-type QueryDef struct {
-	Executor Prepare
-	Query    string
 }
 
 func extractDescription(cve internals.NormalizedVuln) string {
@@ -101,30 +91,3 @@ func extractCvssV3(cve internals.NormalizedVuln) (string, error) {
 	}
 	return string(cvssMetricV3), nil
 }
-
-// prepareBatchStatements returns an array of statements in the order they are passed
-// // also return a function to close all statements
-// func prepareBatchStatements(defs ...QueryDef) ([]*sql.Stmt, func(), error) {
-// 	stmts := make([]*sql.Stmt, 0, len(defs))
-
-// 	cleanup := func() {
-// 		for _, stmt := range stmts {
-// 			if stmt != nil {
-// 				_ = stmt.Close()
-// 			}
-// 		}
-// 	}
-
-// 	for i, def := range defs {
-// 		stmt, err := def.Executor.Prepare(def.Query)
-// 		if err != nil {
-// 			// CRITICAL: If preparation fails halfway, we must execute the cleanup
-// 			// before returning, otherwise we leak the previously prepared statements.
-// 			cleanup()
-// 			return nil, nil, fmt.Errorf("failed preparing query at index %d: %w", i, err)
-// 		}
-// 		stmts = append(stmts, stmt)
-// 	}
-
-// 	return stmts, cleanup, nil
-// }

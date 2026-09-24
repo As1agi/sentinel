@@ -152,7 +152,9 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 		return VulnPackage{}, err
 	}
 	defer func() {
-		_ = rows.Close()
+		if rowCloseErr := rows.Close(); rowCloseErr != nil {
+			log.Println(rowCloseErr)
+		}
 	}()
 	//loop through rows and check them for vulns
 	//for now we assume only one will match so we return only one result
