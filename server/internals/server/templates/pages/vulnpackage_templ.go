@@ -36,7 +36,7 @@ func RenderVulnPackages(vulnPackages []internals.VulnPackage, machineID string, 
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = layouts.MainFrame("Vulnerabilities", VulnPackagePageContainer(vulnPackages, machineID, nextOffset)).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layouts.MainFrame("Vulnerabilities", VulnPackagePageSection(vulnPackages, machineID, nextOffset)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -45,7 +45,7 @@ func RenderVulnPackages(vulnPackages []internals.VulnPackage, machineID string, 
 }
 
 // VulnPackagePageContainer builds the alert box and iterates through items
-func VulnPackagePageContainer(vulnPackages []internals.VulnPackage, machineID string, nextOffset int) templ.Component {
+func VulnPackagePageSection(vulnPackages []internals.VulnPackage, machineID string, nextOffset int) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -66,7 +66,20 @@ func VulnPackagePageContainer(vulnPackages []internals.VulnPackage, machineID st
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div role=\"alert\" class=\"alert alert-warning items-start flex flex-col gap-4 w-full\"><div class=\"flex items-center gap-2\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"h-6 w-6 shrink-0 stroke-current\" fill=\"none\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z\"></path></svg> <span class=\"font-bold text-lg\">Vulnerable Packages Identified</span></div><div id=\"vuln-list-contents\" class=\"w-full space-y-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"p-6\"><!-- Page header --><div class=\"flex items-center justify-between mb-6\"><div><p class=\"text-sm text-base-content/60\">MACHINE</p><h1 class=\"text-2xl font-bold\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(machineID)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 26, Col: 38}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</h1></div><div class=\"badge badge-outline\">Number Of Vulns</div></div><!-- Search --><div class=\"mb-6\"><input type=\"search\" placeholder=\"Search CVE, package, severity...\" class=\"input input-bordered w-full\"></div><!-- Vulnerability list --><div id=\"vuln-list-contents\" class=\"w-full space-y-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -74,7 +87,7 @@ func VulnPackagePageContainer(vulnPackages []internals.VulnPackage, machineID st
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><!-- Vulnerability list --></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,9 +112,9 @@ func VulnListRows(vulnPackages []internals.VulnPackage, machineID string, nextOf
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var3 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var3 == nil {
-			templ_7745c5c3_Var3 = templ.NopComponent
+		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var4 == nil {
+			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		for _, pkg := range vulnPackages {
@@ -111,20 +124,20 @@ func VulnListRows(vulnPackages []internals.VulnPackage, machineID string, nextOf
 			}
 		}
 		if nextOffset > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div id=\"load-more-container\" class=\"w-full flex justify-center pt-2\"><button hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div id=\"load-more-container\" class=\"w-full flex justify-center pt-2\"><button hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(string(templ.URL(fmt.Sprintf("/machines/%s/vulns?offset=%d", machineID, nextOffset))))
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(string(templ.URL(fmt.Sprintf("/machines/%s/vulns?offset=%d", machineID, nextOffset))))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 39, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 60, Col: 98}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" hx-target=\"#load-more-container\" hx-swap=\"outerHTML\" class=\"btn btn-sm btn-outline btn-primary\">Load More Packages</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-target=\"#load-more-container\" hx-swap=\"outerHTML\" class=\"btn btn-sm btn-outline btn-primary\">Load More Packages</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -149,77 +162,64 @@ func VulnPackageCard(vulnPackage internals.VulnPackage) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var5 == nil {
-			templ_7745c5c3_Var5 = templ.NopComponent
+		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var6 == nil {
+			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"w-full flex flex-col border-b border-amber-300 pb-3 last:border-none\"><h3 class=\"font-bold text-base text-amber-950\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.PackageName)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 53, Col: 28}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</h3><div class=\"grid grid-cols-2 gap-x-6 gap-y-2 mt-1 text-sm text-gray-800\"><div><span class=\"font-semibold text-gray-900\">Installed:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<!-- Vulnerability --><article class=\"card bg-base-200 border border-base-300\"><div class=\"card-body p-4\"><!-- Top --><div class=\"flex items-center justify-between\"><div><p class=\"font-mono font-bold\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Installed)
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CveId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 59, Col: 27}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 79, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><div><span class=\"font-semibold text-gray-900\">Introduced:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</p><p class=\"text-sm text-base-content/60\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Introduced)
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.PackageName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 63, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 83, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><div><span class=\"font-semibold text-gray-900\">Fixed:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p></div><div class=\"text-right\"><div class=\"badge badge-error\"><!-- Severity  -->HIGH</div><p class=\"text-sm mt-1\"><!-- CVSS SCORE  -->CVSS 3: <strong>UNKNOWN</strong></p></div></div><!-- Version information --><div class=\"grid grid-cols-2 gap-4 mt-4\"><div><p class=\"text-xs uppercase text-base-content/50\">Introduced</p><p class=\"font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Fixed)
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Introduced)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 67, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 106, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><div class=\"break-all\"><span class=\"font-semibold text-gray-900\">CVE-ID:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p></div><div><p class=\"text-xs uppercase text-base-content/50\">Fixed</p><p class=\"font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CveId)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Fixed)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 71, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 114, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p></div></div><!-- CVSS --><div class=\"flex gap-6 mt-4 text-sm\"><div><span class=\"text-base-content/50\">CVSS 2</span> <strong>7.5</strong></div><div><span class=\"text-base-content/50\">CVSS 3</span> <strong>8.1</strong></div></div></div></article>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

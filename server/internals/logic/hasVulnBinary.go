@@ -96,14 +96,12 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 		if err != nil {
 			return []VulnPackage{}, fmt.Errorf("error fetching user os packages from database %v", err)
 		}
-		if err = rows.Err(); err != nil {
-			return []VulnPackage{}, err
-		}
+
 		//loop throught the batch we have and scan for vulns
 		for rows.Next() {
 			var id int
-			var pkg internals.OSPackage
 
+			var pkg internals.OSPackage
 			if err = rows.Scan(
 				&id,
 				&pkg.Name,
@@ -118,8 +116,12 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 			count++
 			// audit package
 			vulnPkg, err := IsVulnerablePackage(getMatchingCVEStmt, seen, ecosystem, pkg)
-			if err != nil || vulnPkg.PackageName == "" {
-				//log.Printf("Checked package %+v for vulnerabilities\n found:none\n Error:%v\n", pkg, err)
+			if err != nil {
+				log.Printf("error auditing package %s: %v", pkg.Name, err)
+				continue
+			}
+
+			if vulnPkg.PackageName == "" {
 				continue
 			}
 			//log.Printf("Found vulnerabilities in package %+v\nFound:1\nVuln Pkg:%+v\n", pkg, vulnPkg)
@@ -128,6 +130,9 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 			//todo later on to prevent nuking our ram, we update the database in batches of 5 vulnPackages at a tim
 		}
 
+		if err = rows.Err(); err != nil {
+			return []VulnPackage{}, err
+		}
 		checked += count
 		if err := rows.Close(); err != nil {
 			return []VulnPackage{}, err
@@ -146,16 +151,10 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 
 	rows, err := stmt.Query(ecosystem, osPackage.Name, osPackage.Source.SourceName)
 	if err != nil {
+		log.Printf("error querying database rows for package , %v", err)
 		return VulnPackage{}, fmt.Errorf("error querying database rows for package , %v", err)
 	}
-	if err = rows.Err(); err != nil {
-		return VulnPackage{}, err
-	}
-	defer func() {
-		if rowCloseErr := rows.Close(); rowCloseErr != nil {
-			log.Println(rowCloseErr)
-		}
-	}()
+
 	//loop through rows and check them for vulns
 	//for now we assume only one will match so we return only one result
 
@@ -168,12 +167,13 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 			&introduced,
 			&isFixed,
 			&purl); err != nil {
+
+			log.Printf("failed scanning row data: %+v", err)
 			return VulnPackage{}, fmt.Errorf("failed scanning row data: %w", err)
 		}
 
-		//convert sql.NullString to string
+		log.Println("WE GOT HERE 1-1")
 		fixed := isFixed.String
-		//todo use SQL later on to return source/original strings
 
 		//if packageName == osPackage.sourceName name then we use the package version
 		//this is a check to find out which version we use for checking for vulnerabilities
@@ -182,10 +182,11 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 			if err != nil {
 				return VulnPackage{}, err
 			} else if result == Safe {
+				log.Printf("Safe Package %+v", osPackage)
 				return VulnPackage{}, nil
 			} //beyond this point thy package is vulnerable
 
-			//log.Printf("\nmatched Package name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
+			log.Printf("\nmatched Package name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
 			pkg := VulnPackage{
 				PackageName: osPackage.Name,
 				Installed:   osPackage.Version,
@@ -219,25 +220,11 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 
 		//error logging for when we cant match
 
-		switch packageName {
-		case osPackage.Name:
-			return VulnPackage{}, nil
-			//fmt.Errorf("package version not available , unable to match the data\n "+
-			//",CVE package name:%v\n,OS package name:%v\nIntroduced:%v\nFixed:%v\n", osPackage.Name, packageName, introduced, fixed)
+	}
 
-		case osPackage.Source.SourceName:
-			//no version available for the source hence we cant do any comparison
-			return VulnPackage{}, nil
-			//fmt.Errorf("package version not available , unable to match the data\n "+
-			//"CVE package name:%v\n,OS package name:%v\nIntroduced:%v\nFixed:%v\n", packageName, osPackage.Source.SourceName, introduced, fixed)
-
-		}
-		// if packageName == osPackage.Name {
-		// 	return VulnPackage{}, nil
-		// } else if packageName == osPackage.Source.SourceName {
-
-		// 	return VulnPackage{}, nil
-		// }
+	if err = rows.Err(); err != nil {
+		log.Printf("rows error, %v", err)
+		return VulnPackage{}, err
 	}
 
 	return VulnPackage{}, nil //fmt.Errorf("unable to match the vulnerable packages for some unknown reason *sigh*\n")
