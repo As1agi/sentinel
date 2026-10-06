@@ -16,23 +16,25 @@ templ RenderSBOM(machineList map[string]string) {
 
 //the template for the machineCard
 templ machinesTable(machineList map[string]string) {
-	<div class="m-2 grid grid-cols-2 gap-4 overflow-auto bg-amber-200 p-4 font-mono text-sm rounded">
-      <!-- Header Row -->
-      <div class="font-bold text-amber-900 hover:bg-amber-400 active:bg-amber-950 active:text-white p-1 transition">Name</div>
-      <div class="font-bold text-amber-900 p-1">MachineID</div>
-        for id,name := range machineList{
-               @machineRow(name,id)
+            <section class="mb-6">
+
+                <header class="grid grid-cols-2 font-bold p-2 bg-green-200">
+                    <p>MACHINE</p>
+                    <p>MACHINE-ID</p>
+                </header>
+
+				<div class="grid grid-cols-2 p-2 border-b">
+					for id,name := range machineList{
+              		 @machineRow(name,id)
         }
-    </div>
+				</div>	
+            </section>
 }
 
 templ machineRow(name string, ID string) {
-<!-- Data Row -->
-<a
-		href={ string(templ.URL("/machines/" + ID+"/vulns")) }
-		class="col-span-2 grid grid-cols-2 hover:bg-amber-300 p-1 rounded transition block group no-underline"
-	>
-		<div class="text-gray-800 group-hover:text-amber-950 font-medium">{ name }</div>
-		<div class="text-gray-600 break-all font-light">{ ID }</div>
-	</a>
+                    <a href={ string(templ.URL("/machines/" + ID+"/vulns")) }
+					 class="contents">
+                        <p>{ name }</p>
+                        <p>{ ID }</p>
+					</a>
 }

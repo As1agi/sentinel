@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"server/internals/config"
+	"strings"
 	"sync"
 )
 
@@ -106,7 +107,7 @@ func osvAdvisoryNormalize(advisory *OsvAdvisory) []normalizedVuln {
 
 		n.AdvisoryID = ExtractCVE(advisory.ID)
 		n.Upstream = advisory.Upstream
-		n.Ecosystem = affected.Package.Ecosystem
+		n.Ecosystem = strings.ToLower(affected.Package.Ecosystem)
 		n.PackageName = affected.Package.Name
 		n.Purl = affected.Package.Purl
 

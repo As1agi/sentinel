@@ -48,8 +48,8 @@ func init() {
 	databaseCmd.Flags().BoolVarP(&populate, "populate", "p", false, "populate the database")
 	databaseCmd.Flags().BoolVar(&skipNormalize, "skip-normalize", false, "skip normalization of the data")
 	databaseCmd.Flags().BoolVar(&migrate, "migrate", false, "migrate the database schema")
-	databaseCmd.Flags().BoolVar(&populate_nvd, "nvd", false, "add the NVD data to the database")
-	databaseCmd.Flags().BoolVar(&populate_osv, "osv", false, "add the OSV data to the database")
+	databaseCmd.Flags().BoolVar(&populate_nvd, "nvd", false, "add the NVD only data to the database")
+	databaseCmd.Flags().BoolVar(&populate_osv, "osv", false, "add the OSV data only to the database")
 
 	//server flags
 	serverCmd.Flags().StringVarP(&port, "port", "p", "8080", "")
