@@ -86,12 +86,12 @@ templ VulnPackageCard(vulnPackage internals.VulnPackage) {
                                 <div class="text-right">
                                     <div class="badge badge-error">
 									  <!-- Severity  -->
-                                        HIGH
+                                        SEVERITY : {vulnPackage.CvssMetricV2.BaseSeverity}
                                     </div>
 
                                     <p class="text-sm mt-1">
-									 <!-- CVSS SCORE  -->
-                                        CVSS 3: <strong>UNKNOWN</strong>
+									 <!-- CVSS IMPACT SCORE  -->
+                                        CVSS3 EXPLOITABILITY: <strong>{vulnPackage.CvssMetricV3.ExploitabilityScore}</strong>
                                     </p>
                                 </div>
                             </div>
@@ -119,18 +119,18 @@ templ VulnPackageCard(vulnPackage internals.VulnPackage) {
                             <div class="flex gap-6 mt-4 text-sm">
                                 <div>
                         <span class="text-base-content/50">
-                            CVSS 2
+                            CVSS 2 IMPACT SCORE
                         </span>
                                     <strong>
-                                        7.5
+                                        {vulnPackage.CvssMetricV2.ImpactScore}
                                     </strong>
                                 </div>
                                 <div>
                         <span class="text-base-content/50">
-                            CVSS 3
+                            CVSS3 IMPACT SCORE
                         </span>
                                     <strong>
-                                        8.1
+                                        {vulnPackage.CvssMetricV3.ImpactScore}
                                     </strong>
                                 </div>
                             </div>

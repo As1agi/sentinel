@@ -96,9 +96,7 @@ func (s *server) HandleSBOMData(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
-	//fmt.Printf("Payload received cleanly: %+v\n", data)
-
+	
 	if err = database.InsertHostSbom(s.db, data); err != nil {
 		log.Printf("Error inserting data into database %v", err)
 	}
@@ -112,15 +110,11 @@ func (s *server) HandleSBOMData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) AuditPackages(hostname string, machineID string) {
-	//return nothing just add them directly to the database to save time and space later on
-
 	log.Printf("Auditing SBOM from user %v\n", hostname)
 	packages, err := logic.AuditUserPackages(hostname, machineID, s.db)
 	if err != nil {
 		log.Printf("%v\n", err)
 	}
-	//fmt.Printf("\n\n\n vuln packages %++v\n", packages)
-	//save the packages to the database
 	if err := database.InsertHostVulnPackages(s.db, packages, hostname, machineID); err != nil {
 		log.Printf("error inserting vulnPackages to the database:%v\n", err)
 	}

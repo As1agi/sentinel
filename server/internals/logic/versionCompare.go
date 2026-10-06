@@ -13,10 +13,9 @@ import (
 type Result int
 
 const (
-	Safe             Result = 0
-	Vulnerable       Result = 1
-	InvalidVersion   Result = -1
-	DuplicateVersion Result = 2
+	Safe           Result = 0
+	Vulnerable     Result = 1
+	InvalidVersion Result = -1
 )
 
 // CheckVulnerability routes the version strings to the correct specification
@@ -94,8 +93,6 @@ func MatchDebian(installed, introduced, fixed string) (Result, error) {
 		}
 	}
 
-	// Evaluate Upper Bound Fixed
-	//check if unfixed
 	if fixed == "" || fixed == "unfixed" {
 		return Vulnerable, nil
 	}
@@ -104,19 +101,13 @@ func MatchDebian(installed, introduced, fixed string) (Result, error) {
 	if err != nil {
 		return InvalidVersion, fmt.Errorf("invalid fixed Version , %v", err)
 	}
-	// If installed version is less than fixed, it hasn't received the patch
 	if vInst.LessThan(vFixed) {
-		//log.Fatalf("FOUND ONE PACKAGE THAT WAS NOT FIXED BUT A FIXED RANGE VALID VERSION\n")
 		return Vulnerable, nil
 	} else if vInst.GreaterThan(vFixed) || vInst == vFixed {
 		//log.Fatalf("FOUND ONE PACKAGE THAT WAS FIXED AND VALID VERSION\n")
 		return Safe, nil
 	}
-	//installed is greater than fixed so we are safe
-	//log.Fatalf("COULD NOT MATCH THE VERSIONS CORRECTLY vInst:%v  , vFixed:%v", vInst, vFixed)
-	//return InvalidVersion, nil
 	return InvalidVersion, fmt.Errorf("COULD NOT MATCH THE VERSIONS CORRECTLY")
-	//return InvalidVersion, fmt.Errorf("all versions were matched correctly but no valid conclusion ")
 }
 
 // MatchSemver checks if an application dependency falls within [introduced, fixed)

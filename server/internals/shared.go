@@ -63,15 +63,14 @@ type CvssMetricV2 struct {
 
 // VulnPackage is a struct with info about a vuln package which we display to the user
 type VulnPackage struct {
-	PackageName  string `json:"package_name"`
-	Installed    string `json:"installed"`
-	Introduced   string `json:"introduced"`
-	Fixed        string `json:"fixed"`
-	Purl         string `json:"purl"`
-	CveId        string `json:"CveId"`
-	CvssMetricV2 string `json:"cvssMetricv2"`
-	CvssMetricV3 string `json:"cvssMetricv3"`
-	//CVV later on and maybe a summary from AI on how to fix?
+	PackageName  string        `json:"package_name"`
+	Installed    string        `json:"installed"`
+	Introduced   string        `json:"introduced"`
+	Fixed        string        `json:"fixed"`
+	Purl         string        `json:"purl"`
+	CveId        string        `json:"CveId"`
+	CvssMetricV2 CvssMetricV2  `json:"cvssMetricv2,omitempty"`
+	CvssMetricV3 CvssMetricV30 `json:"cvssMetricv3,omitempty"`
 }
 
 // SBOM

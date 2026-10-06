@@ -193,33 +193,85 @@ func VulnPackageCard(vulnPackage internals.VulnPackage) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p></div><div class=\"text-right\"><div class=\"badge badge-error\"><!-- Severity  -->HIGH</div><p class=\"text-sm mt-1\"><!-- CVSS SCORE  -->CVSS 3: <strong>UNKNOWN</strong></p></div></div><!-- Version information --><div class=\"grid grid-cols-2 gap-4 mt-4\"><div><p class=\"text-xs uppercase text-base-content/50\">Introduced</p><p class=\"font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p></div><div class=\"text-right\"><div class=\"badge badge-error\"><!-- Severity  -->SEVERITY : ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Introduced)
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CvssMetricV2.BaseSeverity)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 106, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 89, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</p></div><div><p class=\"text-xs uppercase text-base-content/50\">Fixed</p><p class=\"font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><p class=\"text-sm mt-1\"><!-- CVSS IMPACT SCORE  -->CVSS3 EXPLOITABILITY: <strong>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Fixed)
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CvssMetricV3.ExploitabilityScore)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 114, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 94, Col: 115}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p></div></div><!-- CVSS --><div class=\"flex gap-6 mt-4 text-sm\"><div><span class=\"text-base-content/50\">CVSS 2</span> <strong>7.5</strong></div><div><span class=\"text-base-content/50\">CVSS 3</span> <strong>8.1</strong></div></div></div></article>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</strong></p></div></div><!-- Version information --><div class=\"grid grid-cols-2 gap-4 mt-4\"><div><p class=\"text-xs uppercase text-base-content/50\">Introduced</p><p class=\"font-mono\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Introduced)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 106, Col: 63}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p></div><div><p class=\"text-xs uppercase text-base-content/50\">Fixed</p><p class=\"font-mono\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.Fixed)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 114, Col: 58}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</p></div></div><!-- CVSS --><div class=\"flex gap-6 mt-4 text-sm\"><div><span class=\"text-base-content/50\">CVSS 2 IMPACT SCORE</span> <strong>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 string
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CvssMetricV2.ImpactScore)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 125, Col: 77}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</strong></div><div><span class=\"text-base-content/50\">CVSS3 IMPACT SCORE</span> <strong>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(vulnPackage.CvssMetricV3.ImpactScore)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internals/server/templates/pages/vulnpackage.templ`, Line: 133, Col: 77}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</strong></div></div></div></article>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

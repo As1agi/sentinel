@@ -1,4 +1,4 @@
-.PHONY:all build css dev
+.PHONY:all build css dev templ
 all: build
 .ONESHELL:
 SHELL := /bin/bash
@@ -15,8 +15,9 @@ css: ./assets/css/input.css
 	npx @tailwindcss/cli -i ./assets/css/input.css -o ./assets/static/output.css 1>/dev/null
 
 # todo generate separate assets for the build 
-build: css
+build: css templ
 	@echo "[*] Building server binary"
+	@rm -rf build
 	@mkdir -p build  
 #copy the assets and scripts into the build directory
 	@mkdir -p build/assets build/scripts
@@ -30,3 +31,6 @@ build: css
 	@echo "[*] Generating CSS assets"
 	@mkdir -p ./assets/css
 	@printf '@import "tailwindcss";\n@plugin "daisyui";\n' > ./assets/css/input.css 
+
+templ:
+	@templ generate

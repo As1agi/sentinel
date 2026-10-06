@@ -2,31 +2,22 @@ package logic
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"server/internals"
 )
 
 type VulnPackage struct {
-	PackageName string `json:"package_name"`
-	Installed   string `json:"installed"`
-	Introduced  string `json:"introduced"`
-	Fixed       string `json:"fixed"`
-	Purl        string `json:"purl"`
-	CveId       string `json:"CveId"`
-	//CVV later on and maybe a summary from AI on how to fix?
+	PackageName  string                  `json:"package_name"`
+	Installed    string                  `json:"installed"`
+	Introduced   string                  `json:"introduced"`
+	Fixed        string                  `json:"fixed"`
+	Purl         string                  `json:"purl"`
+	CveId        string                  `json:"CveId"`
+	CvssMetricV2 internals.CvssMetricV2  `json:"cvssMetricv2,omitempty"`
+	CvssMetricV3 internals.CvssMetricV30 `json:"cvssMetricv3,omitempty"`
 }
-
-var ()
-
-//SELECT * FROM cves WHERE ecosystem = SBOM.ecosystem AND bin = SBOM.BIN[X].. then we get the version for the bin and do
-//a comparison for the version... and if vulnerable we add to a list of vuln
-//todo create another table in the DB linking vulnerable packages to a specific user, we will read from the table
-// 	so we can send alerts to the web dashboard
-// 	trigger a go routine as soon as we get an SBOM to check the user's current data for vulnerabilities?
-
-// IsVulnerablePackage checks whether a package is vulnerable
-// pass query as a parameter later for faster work
 
 // AuditUserPackages audits all the packages for a user for vulnerabilities
 func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPackage, error) {
@@ -46,7 +37,7 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 	SELECT id,name,version,source_name,source_version FROM packages WHERE sbom_id = ? AND id > ? ORDER BY id LIMIT 25
 `
 	queryGetMatchingCVEs := `
-	SELECT advisory_id,package_name,introduced,fixed,purl FROM cve WHERE ecosystem = ? AND (
+	SELECT advisory_id,package_name,introduced,fixed,purl,cvssmetric2,cvssmetric3 FROM cve WHERE ecosystem = ? AND (
 	    package_name = ? 
 	    OR package_name = ?
 	)
@@ -91,7 +82,6 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 	var checked int
 	for {
 		var count = 0
-		//todo prepare statements for query for optimization
 		rows, err := db.Query(queryGetOsPackages, sbomID, lastID)
 		if err != nil {
 			return []VulnPackage{}, fmt.Errorf("error fetching user os packages from database %v", err)
@@ -148,6 +138,10 @@ func AuditUserPackages(hostName string, machineID string, db *sql.DB) ([]VulnPac
 
 // IsVulnerablePackage checks if a package is vulnerable
 func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string, osPackage internals.OSPackage) (VulnPackage, error) {
+	//	SELECT advisory_id,package_name,introduced,fixed,purl,cvssmetric2,cvssmetric3 FROM cve WHERE ecosystem = ? AND (
+	//		package_name = ?
+	//	OR package_name = ?
+	//)
 
 	rows, err := stmt.Query(ecosystem, osPackage.Name, osPackage.Source.SourceName)
 	if err != nil {
@@ -158,7 +152,7 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 	//loop through rows and check them for vulns
 	//for now we assume only one will match so we return only one result
 
-	var introduced, purl, packageName, cveID string
+	var introduced, purl, packageName, cveID, cvssV2, cvssV3 string
 	var isFixed sql.NullString
 	for rows.Next() {
 		if err := rows.Scan(
@@ -166,13 +160,17 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 			&packageName,
 			&introduced,
 			&isFixed,
-			&purl); err != nil {
+			&purl,
+			&cvssV2,
+			&cvssV3); err != nil {
 
 			log.Printf("failed scanning row data: %+v", err)
 			return VulnPackage{}, fmt.Errorf("failed scanning row data: %w", err)
 		}
 
-		log.Println("WE GOT HERE 1-1")
+		CvssMetricV2 := CvssV2Unmarshall(cvssV2)
+		CvssMetricV3 := CvssV3Unmarshall(cvssV3)
+
 		fixed := isFixed.String
 
 		//if packageName == osPackage.sourceName name then we use the package version
@@ -180,21 +178,25 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 		if packageName == osPackage.Name && osPackage.Version != "" {
 			result, err := CheckVulnerability(ecosystem, osPackage.Version, introduced, fixed)
 			if err != nil {
+				fmt.Printf("error somehow %v", err)
 				return VulnPackage{}, err
 			} else if result == Safe {
-				log.Printf("Safe Package %+v", osPackage)
+				//log.Printf("Safe Package %+v", osPackage)
 				return VulnPackage{}, nil
 			} //beyond this point thy package is vulnerable
 
 			log.Printf("\nmatched Package name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
 			pkg := VulnPackage{
-				PackageName: osPackage.Name,
-				Installed:   osPackage.Version,
-				Introduced:  introduced,
-				Fixed:       fixed,
-				CveId:       cveID,
-				Purl:        purl,
+				PackageName:  osPackage.Name,
+				Installed:    osPackage.Version,
+				Introduced:   introduced,
+				Fixed:        fixed,
+				CveId:        cveID,
+				Purl:         purl,
+				CvssMetricV2: CvssMetricV2,
+				CvssMetricV3: CvssMetricV3,
 			}
+
 			return createVulnPackage(seen, result, pkg)
 		} else
 		//if the package name is equal to the source package name
@@ -204,22 +206,22 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 				return VulnPackage{}, err
 			} else if result == Safe {
 				return VulnPackage{}, nil
-			} //yeep it is vuln if it goes beyond this point
+			}
+
 			//log.Printf("\nmatched Source name %v with upstream CVE:%v \nIntroduced:%v\nFixed:%v\n checking for vulnerablities..\n", cveID, packageName, introduced, fixed)
-			//todo merge the two into one for cleaner code
+
 			pkg := VulnPackage{
-				PackageName: osPackage.Source.SourceName,
-				Installed:   osPackage.Source.SourceVersion,
-				Introduced:  introduced,
-				Fixed:       fixed,
-				CveId:       cveID,
-				Purl:        purl,
+				PackageName:  osPackage.Source.SourceName,
+				Installed:    osPackage.Source.SourceVersion,
+				Introduced:   introduced,
+				Fixed:        fixed,
+				CveId:        cveID,
+				Purl:         purl,
+				CvssMetricV2: CvssMetricV2,
+				CvssMetricV3: CvssMetricV3,
 			}
 			return createVulnPackage(seen, result, pkg)
 		}
-
-		//error logging for when we cant match
-
 	}
 
 	if err = rows.Err(); err != nil {
@@ -228,6 +230,33 @@ func IsVulnerablePackage(stmt *sql.Stmt, seen map[string]bool, ecosystem string,
 	}
 
 	return VulnPackage{}, nil //fmt.Errorf("unable to match the vulnerable packages for some unknown reason *sigh*\n")
+}
+
+func CvssV2Unmarshall(cvssV2 string) internals.CvssMetricV2 {
+	var CvssMetricV2 internals.CvssMetricV2
+
+	//in the Database we use NA for the values that do not exist
+	if cvssV2 != "NA" {
+		err := json.Unmarshal([]byte(cvssV2), &CvssMetricV2)
+		if err != nil {
+			log.Printf("error unmarshalling the data %+v \n %v", cvssV2, err)
+		}
+		return CvssMetricV2
+	}
+	return internals.CvssMetricV2{}
+}
+
+func CvssV3Unmarshall(cvssV3 string) internals.CvssMetricV30 {
+	var CvssMetricV30 internals.CvssMetricV30
+
+	if cvssV3 != "NA" {
+		err := json.Unmarshal([]byte(cvssV3), &CvssMetricV30)
+		if err != nil {
+			log.Printf("error unmarshalling the data %+v \n %v", cvssV3, err)
+		}
+		return CvssMetricV30
+	}
+	return internals.CvssMetricV30{}
 }
 
 // createVulnPackage handles the results and uses the data provided
